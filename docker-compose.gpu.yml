@@ -1,0 +1,11 @@
+# NVIDIA GPU for Ollama (Linux/Windows with the NVIDIA Container Toolkit).
+# Used automatically by start.sh / start.ps1 when nvidia-smi is found.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hỏi đáp quy chế học vụ</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --text: #1c2430; --muted: #5f6b7a;
+    --border: #dfe3e8; --accent: #1f6feb; --accent-text: #ffffff; --ok: #1a7f37; --warn: #b26b00;
+    --err: #c62828; --user: #e8f0fe; --code: #f3f4f6; --shadow: 0 1px 2px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --surface: #171b21; --surface-2: #1f242c; --text: #e6e9ee; --muted: #9aa4b2;
+      --border: #2b313a; --accent: #4c8dff; --accent-text: #0b0e12; --ok: #3fb950; --warn: #d29922;
+      --err: #f47067; --user: #1c2a42; --code: #222831; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted);
+    max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+  .status.ready .dot { background: var(--ok); }
+  .status.down .dot { background: var(--err); }
+  button { font: inherit; cursor: pointer; }
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    padding: 6px 12px; border-radius: 8px; }
+  .btn:hover { background: var(--surface-2); }
+  main { flex: 1; overflow-y: auto; }
+  .thread { max-width: 820px; margin: 0 auto; padding: 20px 16px 8px; }
+  .empty { text-align: center; color: var(--muted); padding: 8vh 0 0; }
+  .empty h2 { color: var(--text); font-size: 20px; margin: 0 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
+  .chip { border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+  .chip:hover { border-color: var(--accent); }
+  .msg { margin: 14px 0; display: flex; }
+  .msg.user { justify-content: flex-end; }
+  .bubble { max-width: 100%; padding: 10px 14px; border-radius: 12px; overflow-wrap: anywhere; }
+  .msg.user .bubble { background: var(--user); max-width: 85%; white-space: pre-wrap; }
+  .msg.bot .bubble { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); width: 100%; }
+  .note { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .answer > :first-child { margin-top: 0; } .answer > :last-child { margin-bottom: 0; }
+  .answer p, .excerpt p { margin: 0 0 8px; } .answer ul, .answer ol, .excerpt ul, .excerpt ol { margin: 0 0 8px; padding-left: 22px; }
+  .answer h3, .answer h4, .excerpt h3, .excerpt h4 { font-size: 15px; margin: 10px 0 6px; }
+  .answer table, .excerpt table { border-collapse: collapse; margin: 8px 0; font-size: 14px; display: block; overflow-x: auto; }
+  .answer th, .answer td, .excerpt th, .excerpt td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; vertical-align: top; }
+  .answer th, .excerpt th { background: var(--surface-2); }
+  code { background: var(--code); padding: 1px 4px; border-radius: 4px; }
+  .cursor::after { content: "▍"; color: var(--muted); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .thinking { color: var(--muted); font-size: 14px; }
+  .error { color: var(--err); }
+  .sources { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .sources h3 { font-size: 13px; color: var(--muted); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .src { display: block; width: 100%; text-align: left; border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text); border-radius: 8px; padding: 6px 10px; margin: 6px 0 0; font-size: 14px; }
+  .src:hover { border-color: var(--accent); }
+  .src small { color: var(--muted); }
+  .excerpt { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; padding: 8px 12px;
+    font-size: 14px; background: var(--surface); max-height: 360px; overflow: auto; }
+  .excerpt .meta { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+  footer { background: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px 14px; }
+  form { max-width: 820px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+  textarea { flex: 1; resize: none; min-height: 44px; max-height: 180px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .send { background: var(--accent); color: var(--accent-text); border: none; border-radius: 10px; height: 44px; padding: 0 18px; font-weight: 600; }
+  .send:disabled { opacity: .5; cursor: not-allowed; }
+  .hint { max-width: 820px; margin: 6px auto 0; font-size: 12px; color: var(--muted); }
+  @media (max-width: 600px) { .status span.text { display: none; } header h1 { font-size: 15px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hỏi đáp quy chế học vụ</h1>
+  <span id="status" class="status" title=""><span class="dot"></span><span class="text">Đang kiểm tra…</span></span>
+  <button id="reset" class="btn" type="button">Cuộc hội thoại mới</button>
+</header>
+
+<main id="scroller">
+  <div id="thread" class="thread">
+    <div id="empty" class="empty">
+      <h2>Hỏi về quy chế học vụ</h2>
+      <div>Câu trả lời lấy từ tài liệu trong hệ thống, kèm trích dẫn Điều/Khoản.</div>
+      <div class="chips">
+        <button class="chip" type="button">Thời gian đào tạo tối đa của hệ chính quy là bao nhiêu?</button>
+        <button class="chip" type="button">Khi nào sinh viên bị cảnh báo học tập?</button>
+        <button class="chip" type="button">Mỗi học kỳ được đăng ký tối đa bao nhiêu tín chỉ?</button>
+        <button class="chip" type="button">Điểm VP và điểm HT khác nhau thế nào?</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="Nhập câu hỏi…"></textarea>
+    <button id="send" class="send" type="submit">Gửi</button>
+  </form>
+  <div class="hint">Enter để gửi, Shift+Enter xuống dòng. Chạy hoàn toàn trên máy của bạn; câu trả lời có thể sai, hãy đối chiếu trích đoạn nguồn.</div>
+</footer>
+
+<script>
+(() => {
+  const HISTORY_MESSAGES = 6;              // last 3 user/assistant turns are sent as context
+  const $ = (id) => document.getElementById(id);
+  const thread = $("thread"), scroller = $("scroller"), input = $("input"), sendBtn = $("send");
+  let history = [];                         // kept in memory only
+  let ready = false, busy = false, controller = null;
+
+  // ---- markdown ----
+  const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Small built-in Markdown renderer (no CDN: the app must work offline). Handles what the
+  // model and the excerpts use: paragraphs, "-"/"o"/"+" bullets, numbered lists, tables,
+  // headings, **bold**, *italic*, `code`. Input is escaped first, so no HTML gets through.
+  function inline(s) {
+    return escapeHtml(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>")
+      .replace(/&lt;br&gt;/g, "<br>");
+  }
+  function md(text) {
+    const lines = String(text).replace(/\r/g, "").split("\n");
+    const out = [];
+    let list = null;   // "ul" | "ol"
+    const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) { closeList(); continue; }
+      if (line.startsWith("|") && i + 1 < lines.length && /^\|?\s*:?-{2,}/.test(lines[i + 1].trim())) {
+        closeList();
+        const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => inline(c.trim()));
+        const head = cells(line);
+        i += 1;
+        const rows = [];
+        while (i + 1 < lines.length && lines[i + 1].trim().startsWith("|")) rows.push(cells(lines[++i]));
+        out.push("<table><thead><tr>" + head.map((c) => `<th>${c}</th>`).join("") + "</tr></thead><tbody>"
+          + rows.map((r) => "<tr>" + r.map((c) => `<td>${c}</td>`).join("") + "</tr>").join("") + "</tbody></table>");
+        continue;
+      }
+      let m;
+      if ((m = line.match(/^(#{1,4})\s+(.*)$/))) { closeList(); const n = Math.min(m[1].length + 2, 6); out.push(`<h${n}>${inline(m[2])}</h${n}>`); continue; }
+      if ((m = line.match(/^[-*+•o]\s+(.*)$/))) {
+        if (list !== "ul") { closeList(); out.push("<ul>"); list = "ul"; }
+        out.push(`<li>${inline(m[1])}</li>`); continue;
+      }
+      if ((m = line.match(/^(\d+)[.)]\s+(.*)$/)) && list === "ol") { out.push(`<li>${inline(m[2])}</li>`); continue; }
+      if ((m = line.match(/^(\d+)[.)]\s+(.*)$/)) && /^\d+[.)]\s/.test((lines[i + 1] || "").trim())) {
+        closeList(); out.push(`<ol start="${m[1]}">`); list = "ol"; out.push(`<li>${inline(m[2])}</li>`); continue;
+      }
+      closeList();
+      out.push(`<p>${inline(line)}</p>`);
+    }
+    closeList();
+    return out.join("");
+  }
+
+  // ---- status ----
+  async function pollHealth() {
+    const el = $("status"), text = el.querySelector(".text");
+    let msg, cls, detail = "";
+    try {
+      const r = await fetch("/health", { cache: "no-store" });
+      const h = await r.json();
+      detail = JSON.stringify(h, null, 2);
+      if (h.ready) { msg = "Sẵn sàng"; cls = "ready"; }
+      else if (h.ollama !== "ok") { msg = "Chưa kết nối được Ollama"; cls = "down"; }
+      else if (String(h.embed_model).startsWith("missing")) { msg = "Đang tải model embedding…"; }
+      else if (String(h.llm_model).startsWith("missing")) { msg = "Đang tải model ngôn ngữ…"; }
+      else if (h.qdrant !== "ok") { msg = "Chưa kết nối được Qdrant"; cls = "down"; }
+      else if (!h.points) { msg = h.ingest === "running" ? "Đang nạp tài liệu…" : "Chưa có tài liệu (chưa ingest)"; }
+      else { msg = "Chưa sẵn sàng"; }
+      ready = !!h.ready;
+    } catch (e) {
+      msg = "Đang khởi động…"; cls = "down"; ready = false;
+    }
+    el.className = "status " + (cls || "");
+    text.textContent = msg;
+    el.title = detail;
+    updateSend();
+    setTimeout(pollHealth, ready ? 30000 : 4000);
+  }
+  function updateSend() {
+    sendBtn.disabled = busy ? false : (!ready || !input.value.trim());
+    sendBtn.textContent = busy ? "Dừng" : "Gửi";
+    sendBtn.title = ready ? "" : "Hệ thống chưa sẵn sàng";
+  }
+
+  // ---- rendering ----
+  function scrollDown() { scroller.scrollTop = scroller.scrollHeight; }
+  function addUser(text) {
+    $("empty")?.remove();
+    const row = document.createElement("div");
+    row.className = "msg user";
+    row.innerHTML = `<div class="bubble"></div>`;
+    row.firstChild.textContent = text;
+    thread.appendChild(row);
+    scrollDown();
+  }
+  function addBot() {
+    const row = document.createElement("div");
+    row.className = "msg bot";
+    row.innerHTML = `<div class="bubble"><div class="note" hidden></div><div class="answer"><span class="thinking">Đang tra cứu tài liệu…</span></div><div class="sources" hidden><h3>Nguồn tham khảo</h3></div></div>`;
+    thread.appendChild(row);
+    scrollDown();
+    return {
+      note: row.querySelector(".note"),
+      answer: row.querySelector(".answer"),
+      sources: row.querySelector(".sources"),
+    };
+  }
+  function renderSources(box, sources) {
+    if (!sources.length) return;
+    box.hidden = false;
+    sources.forEach((s, i) => {
+      const pages = s.page_end && s.page_end !== s.page ? `trang ${s.page}–${s.page_end}` : `trang ${s.page}`;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "src";
+      btn.setAttribute("aria-expanded", "false");
+      btn.innerHTML = `<b>[${i + 1}]</b> ${escapeHtml(s.label)}${s.article_title ? " – " + escapeHtml(s.article_title) : ""} <small>· ${pages} · ${escapeHtml(s.doc_short_title || s.doc_title || "")}</small>`;
+      const panel = document.createElement("div");
+      panel.className = "excerpt";
+      panel.hidden = true;
+      const refs = (s.source_refs || []).join("; ");
+      panel.innerHTML = `<div class="meta">${escapeHtml(s.doc_title || "")} · ${pages}${refs ? " · Nguồn gốc: " + escapeHtml(refs) : ""}</div>${md(s.text || "")}`;
+      btn.onclick = () => {
+        panel.hidden = !panel.hidden;
+        btn.setAttribute("aria-expanded", String(!panel.hidden));
+      };
+      box.append(btn, panel);
+    });
+  }
+
+  // ---- SSE over fetch (POST) ----
+  async function* sse(response) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        let event = "message", data = "";
+        for (const line of raw.split("\n")) {
+          if (line.startsWith("event:")) event = line.slice(6).trim();
+          else if (line.startsWith("data:")) data += line.slice(5).trim();
+        }
+        yield { event, data: data ? JSON.parse(data) : null };
+      }
+    }
+  }
+
+  async function ask(text) {
+    text = text.trim();
+    if (!text || busy) return;
+    busy = true; updateSend();
+    addUser(text);
+    const view = addBot();
+    let answer = "", pending = false, finished = false;
+    const paint = (final) => {
+      if (finished && !final) return;
+      if (final) finished = true;
+      view.answer.innerHTML = md(answer || "");
+      view.answer.classList.toggle("cursor", !final);
+      scrollDown();
+    };
+    controller = new AbortController();
+    try {
+      const resp = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: history.slice(-HISTORY_MESSAGES) }),
+        signal: controller.signal,
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+      for await (const { event, data } of sse(resp)) {
+        if (event === "query") {
+          view.note.hidden = false;
+          view.note.textContent = "Tra cứu với câu hỏi: " + data;
+        } else if (event === "token") {
+          answer += data;
+          if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; paint(false); }); }
+        } else if (event === "sources") {
+          paint(true);
+          renderSources(view.sources, data || []);
+        } else if (event === "error") {
+          throw new Error(data && data.message);
+        }
+      }
+      paint(true);
+      history.push({ role: "user", content: text }, { role: "assistant", content: answer });
+    } catch (e) {
+      if (e.name === "AbortError") {
+        paint(true);
+        if (answer) history.push({ role: "user", content: text }, { role: "assistant", content: answer });
+      } else {
+        view.answer.classList.remove("cursor");
+        view.answer.innerHTML = `<span class="error">Lỗi: ${escapeHtml(String(e.message || e))}</span>`;
+      }
+    } finally {
+      busy = false; controller = null; updateSend(); input.focus();
+    }
+  }
+
+  // ---- events ----
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (busy) { controller?.abort(); return; }
+    const text = input.value;
+    input.value = ""; autosize();
+    ask(text);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("form").requestSubmit(); }
+  });
+  function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; updateSend(); }
+  input.addEventListener("input", autosize);
+  document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => { if (ready) ask(c.textContent); }));
+  $("reset").addEventListener("click", () => {
+    controller?.abort();
+    history = [];
+    location.reload();
+  });
+
+  pollHealth();
+  input.focus();
+})();
+</script>
+</body>
+</html>

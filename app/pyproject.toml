@@ -4,10 +4,15 @@ version = "0.1.0"
 description = "Local RAG chatbot for academic regulations (Vietnamese)"
 requires-python = ">=3.11"
 dependencies = [
-    "pydantic-settings>=2.2",
-    # ingest / OCR (needs the `tesseract` binary with the `vie` language pack)
+    "pydantic-settings>=2.2,<3",
+    "fastapi>=0.110,<1",
+    "uvicorn[standard]>=0.29,<1",
+    "httpx>=0.27,<1",
+    "qdrant-client>=1.15,<1.16",
+    # ingest: OCR needs the `tesseract` binary with the `vie` language pack (see Dockerfile)
     "pymupdf>=1.24",
     "pytesseract>=0.3.10",
     "pillow>=10",
     "numpy>=1.26",
+    "python-docx>=1.1",
 ]
