@@ -1,4 +1,4 @@
-<!-- doc: {"doc_id": "quy-dinh-ve-hoc-vu-va-dao-tao-phien-ban-hop-nhat", "source_file": "Quy định về học vụ và đào tạo - Phiên bản hợp nhất.pdf", "sha256": "6beacdc97e36daf7bd769e3d2570a218b866af1350831cfe8b8232e23e16c13c", "ocr": "tesseract-vie"} -->
+<!-- doc: {"doc_id": "quy-dinh-ve-hoc-vu-va-dao-tao-phien-ban-hop-nhat", "source_file": "Quy định về học vụ và đào tạo - Phiên bản hợp nhất.pdf", "sha256": "6beacdc97e36daf7bd769e3d2570a218b866af1350831cfe8b8232e23e16c13c", "ocr": "tesseract-vie", "title": "Quy định về học vụ và đào tạo bậc đại học – Phiên bản hợp nhất", "short_title": "Quy định học vụ ĐH (hợp nhất 2022)", "number": "285/ĐHBK-ĐT", "effective_year": 2022} -->
 
 <!-- page: 1 -->
 TRƯỜNG ĐẠI HỌC BÁCH KHOA

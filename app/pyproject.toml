@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Local RAG chatbot for academic regulations (Vietnamese)"
 requires-python = ">=3.11"
 dependencies = [
+    "pydantic-settings>=2.2",
     # ingest / OCR (needs the `tesseract` binary with the `vie` language pack)
     "pymupdf>=1.24",
     "pytesseract>=0.3.10",
