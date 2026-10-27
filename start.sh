@@ -2,8 +2,25 @@
 # One command from a fresh clone to a running stack:
 #   docker check -> .env -> hardware detection -> compose up -> model pull -> ingest -> URL.
 # Re-running is safe: images are cached, pulled models are skipped, ingest is incremental.
+#
+# Modes:
+#   ./start.sh                                   local LLM on Ollama (LLM_MODEL, default qwen3:4b)
+#   OPENAI_API_KEY=sk-... ./start.sh --cloud     cloud LLM (OPENAI_MODEL, default gpt-4o-mini)
+# Embeddings always run on Ollama (bge-m3), so switching mode needs no re-ingest.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+MODE_ARG=
+for arg in "$@"; do
+  case "$arg" in
+    --cloud|--openai) MODE_ARG=openai ;;
+    --local)          MODE_ARG=ollama ;;
+    -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
+    *) printf 'Tham số không hợp lệ: %s (dùng --cloud hoặc --local)\n' "$arg" >&2; exit 1 ;;
+  esac
+done
+# Values exported in the shell win over .env (the key is meant to be given at start).
+SHELL_LLM_PROVIDER=${LLM_PROVIDER:-}; SHELL_OPENAI_API_KEY=${OPENAI_API_KEY:-}; SHELL_OPENAI_MODEL=${OPENAI_MODEL:-}
 
 say()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!  %s\033[0m\n' "$*"; }
@@ -21,10 +38,36 @@ if [ ! -f .env ]; then
 fi
 set -a; # shellcheck disable=SC1091
 . ./.env; set +a
+[ -n "$SHELL_LLM_PROVIDER" ] && LLM_PROVIDER=$SHELL_LLM_PROVIDER
+[ -n "$SHELL_OPENAI_API_KEY" ] && OPENAI_API_KEY=$SHELL_OPENAI_API_KEY
+[ -n "$SHELL_OPENAI_MODEL" ] && OPENAI_MODEL=$SHELL_OPENAI_MODEL
+[ -n "$MODE_ARG" ] && LLM_PROVIDER=$MODE_ARG
+LLM_PROVIDER=$(printf '%s' "${LLM_PROVIDER:-ollama}" | tr '[:upper:]' '[:lower:]')
+OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
 LLM_MODEL=${LLM_MODEL:-qwen3:4b}
 EMBED_MODEL=${EMBED_MODEL:-bge-m3}
 APP_PORT=${APP_PORT:-8080}
 DEFAULT_OLLAMA_URL=http://ollama:11434
+
+# 2b. LLM mode
+case "$LLM_PROVIDER" in
+  openai)
+    [ -n "${OPENAI_API_KEY:-}" ] || die "Chế độ cloud cần OPENAI_API_KEY. Chạy: OPENAI_API_KEY=sk-... ./start.sh --cloud"
+    say "Chế độ cloud: LLM = $OPENAI_MODEL (OpenAI); embedding vẫn chạy local ($EMBED_MODEL)"
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+      -H "Authorization: Bearer $OPENAI_API_KEY" "https://api.openai.com/v1/models/$OPENAI_MODEL" || true)
+    case "$code" in
+      200) say "OPENAI_API_KEY hợp lệ" ;;
+      401) die "OPENAI_API_KEY không hợp lệ (HTTP 401)." ;;
+      403|404) die "Key không dùng được model $OPENAI_MODEL (HTTP $code)." ;;
+      *) warn "Không kiểm tra được key với OpenAI (HTTP ${code:-000}), vẫn tiếp tục." ;;
+    esac
+    ;;
+  ollama) say "Chế độ local: LLM = $LLM_MODEL (Ollama)" ;;
+  *) die "LLM_PROVIDER không hợp lệ: $LLM_PROVIDER (dùng ollama hoặc openai)" ;;
+esac
+export LLM_PROVIDER OPENAI_MODEL
+export OPENAI_API_KEY=${OPENAI_API_KEY:-}
 
 # 3. Hardware / where Ollama runs
 COMPOSE=(docker compose -f docker-compose.yml)
@@ -116,7 +159,7 @@ pull_model() {
   fi
 }
 pull_model "$EMBED_MODEL"
-pull_model "$LLM_MODEL"
+[ "$LLM_PROVIDER" = openai ] || pull_model "$LLM_MODEL"
 
 # 7. Ingest (incremental: unchanged documents are skipped)
 say "Ingest tài liệu trong data/ ..."
@@ -124,7 +167,8 @@ say "Ingest tài liệu trong data/ ..."
 
 # 8. Ready
 if curl -sf "http://localhost:$APP_PORT/health" >/dev/null; then
-  printf '\n\033[1;32m✅ Mở http://localhost:%s\033[0m\n' "$APP_PORT"
+  printf '\n\033[1;32m✅ Mở http://localhost:%s\033[0m  (LLM: %s)\n' "$APP_PORT" \
+    "$([ "$LLM_PROVIDER" = openai ] && echo "$OPENAI_MODEL, cloud" || echo "$LLM_MODEL, local")"
 else
   warn "Hệ thống chưa sẵn sàng hoàn toàn, xem chi tiết: curl http://localhost:$APP_PORT/health"
 fi

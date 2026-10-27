@@ -1,4 +1,4 @@
-"""Chat model client over the OpenAI-compatible API (Ollama `/v1`, vLLM, ...)."""
+"""Chat model client over the OpenAI-compatible API (Ollama `/v1`, OpenAI, vLLM, ...)."""
 
 from __future__ import annotations
 
@@ -56,15 +56,15 @@ class LLMClient:
         self.client = httpx.Client(
             base_url=settings.llm_url,
             timeout=httpx.Timeout(settings.ollama_timeout_s, connect=10),
-            headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+            headers={"Authorization": f"Bearer {settings.chat_api_key}"},
         )
 
     def _payload(self, messages: list[dict], stream: bool, temperature: float | None) -> dict:
         messages = [dict(m) for m in messages]
-        if self.settings.llm_disable_thinking and messages and messages[-1]["role"] == "user":
+        if self.settings.send_no_think and messages and messages[-1]["role"] == "user":
             messages[-1]["content"] += " /no_think"
         return {
-            "model": self.settings.llm_model,
+            "model": self.settings.chat_model,
             "messages": messages,
             "temperature": self.settings.llm_temperature if temperature is None else temperature,
             "stream": stream,

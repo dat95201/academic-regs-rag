@@ -13,7 +13,8 @@ Quy tắc bắt buộc:
 2. Nếu các trích đoạn không chứa thông tin để trả lời, trả lời đúng một câu: "{NOT_FOUND}"
 3. Mỗi ý trong câu trả lời phải kèm trích dẫn dạng [Tên văn bản, Điều X] hoặc [Tên văn bản, Phụ lục X], lấy đúng tên văn bản và Điều/Phụ lục ghi ở đầu trích đoạn. Có thể ghi thêm mục, ví dụ [Quy định học vụ ĐH (hợp nhất 2022), Điều 5.2].
 4. Giữ nguyên con số, mốc thời gian, điều kiện như trong trích đoạn. Nếu quy định khác nhau theo đối tượng (chính quy, vừa làm vừa học, khoá tuyển sinh...), nêu rõ từng trường hợp.
-5. Trả lời ngắn gọn, đi thẳng vào câu hỏi; dùng gạch đầu dòng khi có nhiều ý."""
+5. Trả lời ngắn gọn, đi thẳng vào câu hỏi; dùng gạch đầu dòng khi có nhiều ý.
+6. Không thêm dòng tóm tắt kiểu "→ Đáp án: ..." hay "Đáp án: ..." ở cuối; câu trả lời phía trên đã là đáp án."""
 
 REWRITE_PROMPT = """Dựa vào hội thoại trước đó, viết lại câu hỏi cuối của người dùng thành một câu hỏi độc lập, đầy đủ ý, để tra cứu trong quy chế học vụ. Giữ nguyên thuật ngữ. Nếu câu hỏi đã đủ ý thì giữ nguyên. Chỉ trả về câu hỏi, không giải thích."""
 

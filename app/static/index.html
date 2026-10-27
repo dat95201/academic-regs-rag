@@ -62,7 +62,17 @@
   code { background: var(--code); padding: 1px 4px; border-radius: 4px; }
   .cursor::after { content: "▍"; color: var(--muted); animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
-  .thinking { color: var(--muted); font-size: 14px; }
+  .thinking { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
+  .dots { display: inline-flex; gap: 5px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .35;
+    animation: bounce 1.2s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .thinking .label { background: linear-gradient(90deg, var(--muted) 0%, var(--text) 50%, var(--muted) 100%);
+    background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 2s linear infinite; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .dots i, .thinking .label { animation: none; } .dots i { opacity: .7; } }
   .error { color: var(--err); }
   .sources { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
   .sources h3 { font-size: 13px; color: var(--muted); margin: 0 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
@@ -123,6 +133,9 @@
   let ready = false, busy = false, controller = null;
 
   // ---- markdown ----
+  // Small models sometimes append a recap line like "→ Đáp án: 12 học kỳ chính." despite the
+  // prompt; drop it so the answer reads naturally.
+  const stripRecap = (s) => String(s).replace(/^[ \t]*(?:[→⇒>\-–]+|=>)?[ \t]*\**[ \t]*Đáp án[ \t]*\**[ \t]*:.*$/gimu, "").trimEnd();
   const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   // Small built-in Markdown renderer (no CDN: the app must work offline). Handles what the
   // model and the excerpts use: paragraphs, "-"/"o"/"+" bullets, numbered lists, tables,
@@ -178,9 +191,10 @@
       const r = await fetch("/health", { cache: "no-store" });
       const h = await r.json();
       detail = JSON.stringify(h, null, 2);
-      if (h.ready) { msg = "Sẵn sàng"; cls = "ready"; }
+      if (h.ready) { msg = "Sẵn sàng · " + h.llm_model; cls = "ready"; }
       else if (h.ollama !== "ok") { msg = "Chưa kết nối được Ollama"; cls = "down"; }
       else if (String(h.embed_model).startsWith("missing")) { msg = "Đang tải model embedding…"; }
+      else if (String(h.llm_model).includes("OPENAI_API_KEY")) { msg = "Thiếu OPENAI_API_KEY"; cls = "down"; }
       else if (String(h.llm_model).startsWith("missing")) { msg = "Đang tải model ngôn ngữ…"; }
       else if (h.qdrant !== "ok") { msg = "Chưa kết nối được Qdrant"; cls = "down"; }
       else if (!h.points) { msg = h.ingest === "running" ? "Đang nạp tài liệu…" : "Chưa có tài liệu (chưa ingest)"; }
@@ -215,7 +229,7 @@
   function addBot() {
     const row = document.createElement("div");
     row.className = "msg bot";
-    row.innerHTML = `<div class="bubble"><div class="note" hidden></div><div class="answer"><span class="thinking">Đang tra cứu tài liệu…</span></div><div class="sources" hidden><h3>Nguồn tham khảo</h3></div></div>`;
+    row.innerHTML = `<div class="bubble"><div class="note" hidden></div><div class="answer"><span class="thinking" role="status"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="label">Đang tra cứu tài liệu…</span></span></div><div class="sources" hidden><h3>Nguồn tham khảo</h3></div></div>`;
     thread.appendChild(row);
     scrollDown();
     return {
@@ -279,7 +293,7 @@
     const paint = (final) => {
       if (finished && !final) return;
       if (final) finished = true;
-      view.answer.innerHTML = md(answer || "");
+      view.answer.innerHTML = md(stripRecap(answer || ""));
       view.answer.classList.toggle("cursor", !final);
       scrollDown();
     };
@@ -296,6 +310,8 @@
         if (event === "query") {
           view.note.hidden = false;
           view.note.textContent = "Tra cứu với câu hỏi: " + data;
+          const label = view.answer.querySelector(".thinking .label");
+          if (label) label.textContent = "Đang soạn câu trả lời…";
         } else if (event === "token") {
           answer += data;
           if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; paint(false); }); }
@@ -307,11 +323,11 @@
         }
       }
       paint(true);
-      history.push({ role: "user", content: text }, { role: "assistant", content: answer });
+      history.push({ role: "user", content: text }, { role: "assistant", content: stripRecap(answer) });
     } catch (e) {
       if (e.name === "AbortError") {
         paint(true);
-        if (answer) history.push({ role: "user", content: text }, { role: "assistant", content: answer });
+        if (answer) history.push({ role: "user", content: text }, { role: "assistant", content: stripRecap(answer) });
       } else {
         view.answer.classList.remove("cursor");
         view.answer.innerHTML = `<span class="error">Lỗi: ${escapeHtml(String(e.message || e))}</span>`;

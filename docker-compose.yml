@@ -39,6 +39,10 @@ services:
       QDRANT_URL: http://qdrant:6333
       # start.sh exports this (container Ollama, native Ollama on macOS, or a custom URL).
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      # Cloud mode (./start.sh --cloud). The key comes from the shell environment at start.
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports: ["${APP_PORT:-8080}:8080"]
     volumes: ["./data:/srv/data"]
     extra_hosts: ["host.docker.internal:host-gateway"]

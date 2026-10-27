@@ -1,5 +1,9 @@
 # Windows equivalent of start.sh. Run in PowerShell:  .\start.ps1
 # (If scripts are blocked: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned)
+# Modes:
+#   .\start.ps1                                       local LLM on Ollama (LLM_MODEL)
+#   $env:OPENAI_API_KEY="sk-..."; .\start.ps1 -Cloud   cloud LLM (OPENAI_MODEL, default gpt-4o-mini)
+param([switch]$Cloud, [switch]$Local)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
@@ -21,6 +25,31 @@ $LLM   = if ($envVars.LLM_MODEL)   { $envVars.LLM_MODEL }   else { "qwen3:4b" }
 $EMBED = if ($envVars.EMBED_MODEL) { $envVars.EMBED_MODEL } else { "bge-m3" }
 $PORT  = if ($envVars.APP_PORT)    { $envVars.APP_PORT }    else { "8080" }
 $default = "http://ollama:11434"
+
+# 2b. LLM mode (shell environment wins over .env; the key is meant to be given at start)
+$provider = if ($env:LLM_PROVIDER) { $env:LLM_PROVIDER } elseif ($envVars.LLM_PROVIDER) { $envVars.LLM_PROVIDER } else { "ollama" }
+if ($Cloud) { $provider = "openai" } elseif ($Local) { $provider = "ollama" }
+$provider = $provider.ToLower()
+$openaiModel = if ($env:OPENAI_MODEL) { $env:OPENAI_MODEL } elseif ($envVars.OPENAI_MODEL) { $envVars.OPENAI_MODEL } else { "gpt-4o-mini" }
+$openaiKey = if ($env:OPENAI_API_KEY) { $env:OPENAI_API_KEY } else { $envVars.OPENAI_API_KEY }
+if ($provider -eq "openai") {
+  if (-not $openaiKey) { Die 'Chế độ cloud cần OPENAI_API_KEY. Chạy: $env:OPENAI_API_KEY="sk-..."; .\start.ps1 -Cloud' }
+  Say "Chế độ cloud: LLM = $openaiModel (OpenAI); embedding vẫn chạy local ($EMBED)"
+  try {
+    Invoke-RestMethod "https://api.openai.com/v1/models/$openaiModel" -Headers @{ Authorization = "Bearer $openaiKey" } -TimeoutSec 15 | Out-Null
+    Say "OPENAI_API_KEY hợp lệ"
+  } catch {
+    $code = $_.Exception.Response.StatusCode.value__
+    if ($code -eq 401) { Die "OPENAI_API_KEY không hợp lệ (HTTP 401)." }
+    elseif ($code -eq 403 -or $code -eq 404) { Die "Key không dùng được model $openaiModel (HTTP $code)." }
+    else { Warn "Không kiểm tra được key với OpenAI, vẫn tiếp tục." }
+  }
+} elseif ($provider -eq "ollama") {
+  Say "Chế độ local: LLM = $LLM (Ollama)"
+} else { Die "LLM_PROVIDER không hợp lệ: $provider (dùng ollama hoặc openai)" }
+$env:LLM_PROVIDER = $provider
+$env:OPENAI_MODEL = $openaiModel
+$env:OPENAI_API_KEY = if ($openaiKey) { $openaiKey } else { "" }
 
 # 3. Hardware / where Ollama runs
 $compose = @("compose", "-f", "docker-compose.yml")
@@ -78,7 +107,7 @@ function Pull-Model($m) {
   if ($LASTEXITCODE -ne 0) { Die "Không tải được model $m" }
 }
 Pull-Model $EMBED
-Pull-Model $LLM
+if ($provider -ne "openai") { Pull-Model $LLM }
 
 # 7. Ingest
 Say "Ingest tài liệu trong data\ ..."
@@ -88,7 +117,8 @@ if ($LASTEXITCODE -ne 0) { Die "Ingest thất bại" }
 # 8. Ready
 try {
   Invoke-RestMethod "http://localhost:$PORT/health" | Out-Null
-  Write-Host "`n✅ Mở http://localhost:$PORT" -ForegroundColor Green
+  $llmInfo = if ($provider -eq "openai") { "$openaiModel, cloud" } else { "$LLM, local" }
+  Write-Host "`n✅ Mở http://localhost:$PORT  (LLM: $llmInfo)" -ForegroundColor Green
 } catch {
   Warn "Hệ thống chưa sẵn sàng hoàn toàn, xem: http://localhost:$PORT/health"
 }

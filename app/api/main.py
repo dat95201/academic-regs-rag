@@ -3,7 +3,7 @@
     GET  /                 chat UI (app/static/index.html)
     POST /chat             {"message", "history"} -> Server-Sent Events: query?, token*, sources, done
     GET  /livez            process is up (container healthcheck)
-    GET  /health           Ollama + models + Qdrant + collection ready? 200 or 503
+    GET  /health           Ollama/OpenAI + models + Qdrant + collection ready? 200 or 503
     POST /ingest           start an ingest in the background
     GET  /ingest           status of the last ingest
     GET  /search?q=...     hybrid retrieval results, for checking the index
@@ -40,6 +40,7 @@ store = QdrantStore(settings.qdrant_url, settings.collection_name)
 embedder = OllamaEmbedder(settings)
 retriever = Retriever(settings, embedder, store)
 chat_service = ChatService(settings, retriever, LLMClient(settings))
+log.info("chat model: %s (%s)", settings.chat_model, "openai" if settings.use_openai else "ollama")
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 _ingest_lock = threading.Lock()
@@ -60,11 +61,17 @@ def _ollama_models() -> set[str]:
 
 @app.get("/health")
 def health() -> JSONResponse:
-    checks: dict = {}
+    checks: dict = {"llm_provider": "openai" if settings.use_openai else "ollama"}
+    if settings.use_openai:
+        # Only the key's presence is checked: /health is polled, and start.sh already verified it.
+        checks["llm_model"] = settings.chat_model if settings.openai_api_key else "missing: OPENAI_API_KEY"
     try:
         models = _ollama_models()
         checks["ollama"] = "ok"
-        for key, name in (("llm_model", settings.llm_model), ("embed_model", settings.embed_model)):
+        wanted = [("embed_model", settings.embed_model)]
+        if not settings.use_openai:
+            wanted.insert(0, ("llm_model", settings.llm_model))
+        for key, name in wanted:
             checks[key] = name if name in models else f"missing: ollama pull {name}"
     except Exception as e:  # noqa: BLE001 - report any connection problem
         checks["ollama"] = f"unreachable at {settings.ollama_url}: {e}"
@@ -76,7 +83,7 @@ def health() -> JSONResponse:
     checks["ingest"] = _ingest_state.get("status")
     ready = (
         checks["ollama"] == "ok"
-        and checks.get("llm_model") == settings.llm_model
+        and checks.get("llm_model") == settings.chat_model
         and checks.get("embed_model") == settings.embed_model
         and checks["qdrant"] == "ok"
         and checks.get("points", 0) > 0
