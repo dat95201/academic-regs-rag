@@ -1,0 +1,112 @@
+\section{Chức năng hệ thống}
+
+Hệ thống cung cấp 33 chức năng, chia thành bốn nhóm theo vai trò người dùng: sinh viên tra cứu,
+cán bộ quản trị nội dung, và nhà phát triển tinh chỉnh hệ thống.
+
+\subsection{Nhóm hỏi đáp}
+
+{\sffamily\small
+\begin{longtable}{@{}p{0.04\textwidth} p{0.26\textwidth} p{0.60\textwidth}@{}}
+\caption{Nhóm chức năng hỏi đáp.}\label{tab:cn-hoidap}\\
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{@{}l}{\footnotesize\itshape Bảng \thetable{} (tiếp)}\\
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+1 & Hỏi đáp tiếng Việt có trích dẫn & Trả lời dựa hoàn toàn trên trích đoạn lấy được; mỗi ý kèm trích dẫn dạng \code{[Tên văn bản, Điều X.Y]} \\
+2 & Trả lời theo luồng (streaming) & Hiển thị từng mẩu chữ ngay khi mô hình sinh ra, qua Server-Sent Events \\
+3 & Hiện trích đoạn trước câu trả lời & Sự kiện \code{retrieved} gửi nguồn về trước token đầu tiên vài giây. Dòng trạng thái ghi “đang đọc N trích đoạn”, không hứa trước là chúng trả lời được \\
+4 & Trích dẫn bấm được & Danh sách nguồn mặc định đóng, có nút bung kèm số lượng. Bấm vào \code{[…, Điều 5.2]} trong câu trả lời sẽ tự bung danh sách và làm nổi bật đúng trích đoạn \\
+5 & Mở PDF gốc đúng trang & Nút PDF ở mỗi nguồn mở bản scan gốc tại đúng số trang chứa điều khoản đó \\
+6 & Hội thoại nhiều lượt & Gửi kèm 3 lượt gần nhất làm ngữ cảnh; câu hỏi nối tiếp phụ thuộc ngữ cảnh được viết lại thành câu độc lập trước khi tra cứu \\
+7 & Từ chối khi ngoài phạm vi & Từng trích đoạn phải tự vượt ngưỡng liên quan; không còn trích đoạn nào thì trả lời “không tìm thấy” kèm gợi ý các Điều gần nhất. Khi mô hình đọc trích đoạn rồi vẫn kết luận không có, giao diện nói rõ đã đọc bao nhiêu đoạn \\
+8 & Cảnh báo trích dẫn vô căn cứ & Trích dẫn tới một Điều không nằm trong ngữ cảnh sẽ được tô màu cảnh báo kèm chú thích \\
+9 & Sao chép \& hỏi lại & Chép nguyên văn câu trả lời; chạy lại cùng câu hỏi để so sánh hai lần sinh \\
+10 & Phản hồi tốt / chưa tốt & Ghi nhận đánh giá kèm câu hỏi và nguồn đã dùng vào nhật ký, phục vụ cải thiện về sau \\
+11 & Lưu hội thoại & Lưu trong trình duyệt người dùng, khôi phục sau khi tải lại trang, không gửi về máy chủ \\
+12 & Dừng giữa chừng & Huỷ luồng đang sinh bằng nút Dừng hoặc phím \code{Esc}, giữ lại phần đã sinh \\
+13 & Câu hỏi gợi ý & Bốn câu hỏi mẫu trên màn hình trống, bấm là hỏi ngay \\
+14 & Giao diện thích ứng & Chế độ sáng/tối/theo hệ thống, bố cục chạy được trên điện thoại, phím tắt \code{/} và \code{Ctrl+K}, tôn trọng tuỳ chọn giảm chuyển động \\
+\end{longtable}
+}
+
+\subsection{Nhóm tra cứu văn bản}
+
+{\sffamily\small
+\begin{longtable}{@{}p{0.04\textwidth} p{0.26\textwidth} p{0.60\textwidth}@{}}
+\caption{Nhóm chức năng tra cứu văn bản.}\label{tab:cn-tracuu}\\
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endfirsthead
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+15 & Mục lục phân cấp & Cây Chương → Điều và danh sách Phụ lục, kèm tiêu đề và số trang, dựng trực tiếp từ chính Markdown đã được nạp nên không bao giờ lệch với dữ liệu đã đánh chỉ mục \\
+16 & Lọc nhanh & Ô lọc theo số điều, tên chương hoặc từ khoá trong tiêu đề, lọc tức thời phía trình duyệt \\
+17 & Đọc toàn văn một Điều & Hiển thị đầy đủ các khoản, bảng biểu được dựng lại thành bảng HTML thay vì in ra ký tự gạch đứng \\
+18 & Hiển thị nguồn gốc từng khoản & Chú thích lề của bản hợp nhất (“Khoản 1, Điều 2, TT17”) được hiện kèm mỗi khoản, cho biết nội dung bắt nguồn từ văn bản gốc nào \\
+19 & Mở PDF đúng trang & Liên kết tới bản scan gốc tại trang chứa điều đang đọc \\
+20 & Chuyển sang hỏi đáp & Nút “Hỏi về Điều N” chuyển sang trang hỏi đáp với câu hỏi đã điền sẵn \\
+\end{longtable}
+}
+
+\subsection{Nhóm chẩn đoán và vận hành}
+
+{\sffamily\small
+\begin{longtable}{@{}p{0.04\textwidth} p{0.26\textwidth} p{0.60\textwidth}@{}}
+\caption{Nhóm chức năng chẩn đoán và vận hành.}\label{tab:cn-chandoan}\\
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endfirsthead
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+21 & Bảng điểm truy xuất & Với một câu hỏi bất kỳ, hiện từng chunk ứng viên cùng điểm fused, cosine, BM25 và điểm rerank \\
+22 & So sánh thô / đầy đủ & Bật tắt để xem danh sách ứng viên thô, hoặc kết quả sau ngưỡng – rerank – mở rộng ngữ cảnh \\
+23 & Hiện từ đã mở rộng & Cho biết bảng thuật ngữ đã thêm cụm nào và nhận diện được số Điều nào trong câu hỏi \\
+24 & Xem cấu hình đang áp dụng & Liệt kê toàn bộ tham số truy xuất đang chạy, không chứa khoá bí mật \\
+25 & Thống kê sử dụng & Tỉ lệ trả lời được, độ trễ p50/p95, số lượt trích dẫn đáng ngờ, tỉ lệ trúng cache, và danh sách câu hỏi không tìm được nội dung \\
+26 & Kiểm tra sức khoẻ & Báo rõ thiếu gì: Ollama chưa chạy, model chưa tải, Qdrant chưa kết nối, hay chưa nạp dữ liệu \\
+27 & Nhật ký truy vấn & Mỗi lượt một dòng JSON: câu hỏi, câu đã viết lại, số ứng viên, độ trễ, có trả lời được không \\
+28 & Bộ đánh giá truy xuất & 30 câu hỏi vàng, đo recall@k / hit@final / MRR, có chế độ bật dần từng kỹ thuật và chế độ quét ngưỡng \\
+29 & Bộ kiểm thử tự động & 69 test chạy được mà không cần Ollama lẫn Qdrant, nhờ Qdrant in-memory và embedder giả \\
+\end{longtable}
+}
+
+\subsection{Nhóm nạp dữ liệu}
+
+{\sffamily\small
+\begin{longtable}{@{}p{0.04\textwidth} p{0.26\textwidth} p{0.60\textwidth}@{}}
+\caption{Nhóm chức năng nạp dữ liệu. Ngoài PDF, pipeline nhận cả DOCX, Markdown và văn bản thuần.}\label{tab:cn-napdl}\\
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endfirsthead
+\toprule
+\tabhead{\textbf{\#}} & \tabhead{\textbf{Chức năng}} & \tabhead{\textbf{Mô tả}} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+30 & OCR bản scan & Nhận diện chữ tiếng Việt, tách riêng thân bài và cột chú thích lề, có bộ nhớ đệm theo mã băm của PDF \\
+31 & Kiểm tra cấu trúc sau OCR & Báo các số Điều bị thiếu hoặc sai thứ tự và các chú thích lề đọc không rõ, để người rà soát biết chỗ cần xem \\
+32 & Nạp dữ liệu tăng dần & Chỉ xử lý văn bản có thay đổi; văn bản bị xoá khỏi nguồn thì các chunk tương ứng cũng bị xoá khỏi Qdrant \\
+33 & Nạp qua API nền & Kích hoạt nạp dữ liệu bằng một lời gọi HTTP, chạy nền, có khoá chống chạy chồng và báo trạng thái \\
+\end{longtable}
+}
+
+\chapterbreak

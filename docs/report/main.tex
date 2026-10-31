@@ -1,0 +1,75 @@
+% ===========================================================================
+% Báo cáo đồ án môn học CO5179
+% Xây dựng hệ thống RAG hỗ trợ truy vấn quy định học vụ
+%
+% Biên dịch:  ./build.sh      (hoặc: latexmk -xelatex main.tex)
+% Bắt buộc dùng XeLaTeX: tiếng Việt + font hệ thống (TeX Gyre Pagella, Carlito).
+% ===========================================================================
+
+\documentclass[12pt,a4paper]{article}
+\input{preamble}
+
+\begin{document}
+
+% --- Trang bìa -------------------------------------------------------------
+\begin{titlepage}
+\centering
+\sffamily
+\vspace*{6mm}
+
+{\bfseries\large TRƯỜNG ĐẠI HỌC BÁCH KHOA}\\[2mm]
+{\bfseries\large ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH}\\[4mm]
+{\color{bkmuted} Năm học 2026 – 2027 \quad·\quad Học kỳ 261}
+
+\vspace{5mm}
+{\color{bkblue}\rule{0.42\textwidth}{1.4pt}}
+
+\vfill
+
+{\color{bkmuted}\large\MakeUppercase{Báo cáo đồ án môn học}}
+
+\vspace{9mm}
+{\color{bkblue}\bfseries\fontsize{26}{32}\selectfont
+ Xây dựng hệ thống RAG\\[2mm] hỗ trợ truy vấn quy định học vụ}
+
+\vspace{14mm}
+{\large\bfseries Môn học:} {\large Những xu hướng mới trong lĩnh vực công nghệ thông tin}\\[2mm]
+{\color{bkmuted} Mã môn học: CO5179}
+
+\vspace{16mm}
+{\color{bkmuted}\small\MakeUppercase{Thành viên thực hiện}}\\[4mm]
+
+\begin{tabular}{r@{\hspace{10mm}}l}
+\bfseries Nguyễn Thái Thành Đạt & \color{bkmuted} MSHV: 2570387 \\[1.5mm]
+\bfseries Lê Công Tú            & \color{bkmuted} MSHV: 2570367 \\[1.5mm]
+\bfseries Ngô Nhất Toàn         & \color{bkmuted} MSHV: 2570515 \\
+\end{tabular}
+
+\vfill
+{\color{bkrule}\rule{0.25\textwidth}{0.6pt}}\\[3mm]
+{\color{bkmuted} Thành phố Hồ Chí Minh, tháng 10 năm 2026}
+\vspace*{6mm}
+\end{titlepage}
+
+% --- Mục lục ---------------------------------------------------------------
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% --- Nội dung --------------------------------------------------------------
+\input{sections/01-gioi-thieu}
+\input{sections/02-co-so-ly-thuyet}
+\input{sections/03-kien-truc}
+\input{sections/04-chuc-nang}
+\input{sections/05-quy-trinh}
+\input{sections/06-chi-tiet-ky-thuat}
+\input{sections/07-cong-nghe}
+\input{sections/08-demo-ket-qua}
+\input{sections/09-danh-gia}
+\input{sections/10-huong-phat-trien}
+\input{sections/11-ket-luan}
+\input{sections/90-tai-lieu}
+\input{sections/91-phu-luc}
+
+\end{document}

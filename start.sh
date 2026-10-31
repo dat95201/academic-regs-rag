@@ -172,7 +172,9 @@ if curl -sf "http://localhost:$APP_PORT/health" >/dev/null; then
 else
   warn "Hệ thống chưa sẵn sàng hoàn toàn, xem chi tiết: curl http://localhost:$APP_PORT/health"
 fi
-echo "   Thử tìm kiếm: curl -G 'http://localhost:$APP_PORT/search' --data-urlencode 'q=thời gian đào tạo tối đa'"
+echo "   Tra cứu toàn văn:  http://localhost:$APP_PORT/browse"
+echo "   Chẩn đoán truy xuất: http://localhost:$APP_PORT/debug"
+echo "   Đo chất lượng truy xuất: make eval    |    Thống kê sử dụng: make metrics"
 echo "   Dừng: ./stop.sh"
 if command -v open >/dev/null 2>&1; then open "http://localhost:$APP_PORT" >/dev/null 2>&1 || true
 elif command -v xdg-open >/dev/null 2>&1; then xdg-open "http://localhost:$APP_PORT" >/dev/null 2>&1 || true

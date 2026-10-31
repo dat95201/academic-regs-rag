@@ -1,0 +1,71 @@
+\section{Đánh giá và hạn chế}
+
+\subsection{Đối chiếu với mục tiêu}
+
+\begin{rtable}
+\begin{tabular}{@{}p{0.26\textwidth} p{0.10\textwidth} p{0.52\textwidth}@{}}
+\toprule
+\textbf{Yêu cầu} & \textbf{Kết quả} & \textbf{Bằng chứng} \\
+\midrule
+Chỉ trả lời dựa trên văn bản & Đạt & Prompt ràng buộc + soát trích dẫn tự động; hình~\ref{fig:count} cho thấy đường từ chối hoạt động \\
+Truy vết được & Đạt & Trích dẫn bấm được (hình~\ref{fig:chat1}), mở trích đoạn gốc (hình~\ref{fig:source}), mở PDF đúng trang \\
+Biết nói “không biết” & Đạt & Ngưỡng liên quan theo từng trích đoạn + câu trả lời cố định \\
+Chạy tại chỗ & Đạt & Ollama + Qdrant trong Docker; chế độ cloud là tuỳ chọn, embedding luôn local \\
+Chất lượng đo được & Đạt & hit@5 = 1,000 và MRR = 0,967 trên 30 câu hỏi vàng (bảng~\ref{tab:eval}) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Đối chiếu kết quả với yêu cầu ban đầu.}
+\label{tab:doichieu}
+\end{rtable}
+
+\subsection{Hạn chế}
+
+\begin{itemize}
+  \item \textbf{Bộ câu hỏi vàng do nhóm tự soạn.} 30 câu là nhỏ, và quan trọng hơn, chúng được
+  viết bởi người đã đọc văn bản — nên có thiên lệch về từ ngữ so với câu hỏi thật của sinh
+  viên. Con số hit@5 = 1,000 vì vậy nên đọc là “không còn lỗ hổng rõ ràng nào trên tập này”,
+  chứ không phải “hệ thống không bao giờ trượt”.
+  \item \textbf{Chưa đánh giá chất lượng câu trả lời.} Harness đo truy xuất, không đo phần
+  sinh. Việc mô hình có diễn giải trung thực trích đoạn hay không hiện chỉ được kiểm bằng mắt
+  và bởi cơ chế soát trích dẫn.
+  \item \textbf{Phụ thuộc bước rà soát thủ công.} Chất lượng toàn hệ thống bị chặn trên bởi
+  chất lượng bản Markdown sau OCR. Với văn bản 57 trang thì chấp nhận được; mở rộng ra hàng
+  chục văn bản thì đây là nút thắt.
+  \item \textbf{Một văn bản duy nhất.} Pipeline hỗ trợ đa tài liệu nhưng chưa được kiểm chứng ở
+  quy mô đó. Khi có nhiều văn bản chồng lấn (quy định cũ – mới), sẽ phát sinh bài toán mới: ưu
+  tiên văn bản còn hiệu lực.
+  \item \textbf{Endpoint \code{/ingest} chưa xác thực.} Ai truy cập được cổng đều kích hoạt
+  được việc nạp lại dữ liệu. Chấp nhận được khi chạy localhost, phải khoá lại nếu triển khai
+  thật.
+  \item \textbf{\code{/chat} là endpoint đồng bộ}, chạy trong threadpool của FastAPI. Với vài
+  chục người dùng đồng thời cần chuyển sang I/O bất đồng bộ.
+\end{itemize}
+
+\subsection{Bài học}
+
+Bốn lỗi đáng nhớ nhất trong quá trình làm, đều cùng một kiểu: \emph{trông thì đúng}.
+
+\begin{enumerate}
+  \item \textbf{Chuẩn hoá min–max trong bộ rerank.} Nó ánh xạ ứng viên tốt nhất về 1 và kém
+  nhất về 0, khiến hai ứng viên chênh nhau 0,01 trông xa nhau như 1,0 và 0,0, và mọi tín hiệu
+  từ vựng trở nên vô dụng. Phát hiện nhờ một unit test, không phải nhờ đọc code.
+  \item \textbf{Cướp câu hỏi ở bước viết lại} (mục~\ref{sec:rewrite}, hình~\ref{fig:bug}). Hệ
+  thống trả lời sai chủ đề nhưng với trích dẫn thật — không một chỉ số kỹ thuật nào bắt được,
+  chỉ phát hiện khi có người gõ một câu hỏi vu vơ.
+  \item \textbf{Ngưỡng liên quan dùng như một cánh cổng chung} (mục~\ref{sec:nguong}). Chỉ cần
+  một trích đoạn đúng là cả năm trích đoạn top-k được giữ theo, nên mọi câu trả lời đều kèm
+  đúng từng ấy “nguồn tham khảo” — kể cả câu trả lời kết luận là không tìm thấy gì. Không test
+  nào bắt được, vì hệ thống chạy đúng như code mô tả; chỉ người dùng để ý thấy con số không bao
+  giờ đổi mới phát hiện ra.
+  \item \textbf{Tên file tiếng Việt trong HTTP header.} Header HTTP chỉ mã hoá được latin-1;
+  tên file tiếng Việt làm máy chủ trả lỗi 500 khi mở PDF. Kèm theo đó là một lỗi tiềm ẩn: macOS
+  lưu tên file ở dạng NFD còn siêu dữ liệu ghi dạng NFC — hai chuỗi như nhau trên macOS nhưng
+  khác nhau trong container Linux.
+\end{enumerate}
+
+Mẫu số chung: lỗi nguy hiểm nhất của một hệ thống RAG không phải lỗi làm nó hỏng, mà lỗi làm nó
+trả lời \textbf{tự tin và sai}, hoặc trình bày thứ trông như bằng chứng mà thực ra không phải.
+Đó là lý do đồ án đầu tư vào ba lớp phòng thủ — ngưỡng liên quan theo từng trích đoạn, soát
+trích dẫn, và bộ bảo vệ bước viết lại — thay vì chỉ tối ưu điểm số.
+
+\chapterbreak

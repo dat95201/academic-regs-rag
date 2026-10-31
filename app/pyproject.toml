@@ -16,3 +16,7 @@ dependencies = [
     "numpy>=1.26",
     "python-docx>=1.1",
 ]
+
+[project.optional-dependencies]
+# ./scripts/test.sh installs these in a throwaway container; nothing extra in the image.
+dev = ["pytest>=8", "ruff>=0.6"]

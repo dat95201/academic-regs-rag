@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # --- models ---
     # "ollama" = local model below; "openai" = cloud chat model (OPENAI_MODEL, needs OPENAI_API_KEY).
     # Embeddings always stay on Ollama, so switching provider needs no re-ingest.
     llm_provider: str = "ollama"
@@ -20,16 +21,46 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://qdrant:6333"
     collection_name: str = "quy_che"
 
+    # --- chunking ---
     chunk_max_tokens: int = 800
     # Paragraphs repeated at the start of the next piece when a section must be cut.
     chunk_overlap_tokens: int = 100
 
+    # --- retrieval ---
     top_k_retrieve: int = 20
     top_k_final: int = 5
     hybrid_search: bool = True
-    rerank_enabled: bool = False
-    rerank_model: str = "BAAI/bge-reranker-v2-m3"
+    # Weights of the two branches in the rank fusion. Dense finds paraphrases, sparse finds
+    # the exact wording; dense is trusted slightly more because the BM25 terms are hashed.
+    dense_weight: float = 1.0
+    sparse_weight: float = 0.8
+    # Reranking the candidates before they reach the model. "heuristic" is free and local
+    # (term coverage + title match + article match + diversity); "llm" spends one extra call
+    # on the chat model; "off" keeps the fusion order. No cross-encoder, so no torch.
+    rerank_enabled: bool = True
+    rerank_mode: str = "heuristic"  # off | heuristic | llm
+    rerank_candidates: int = 20
+    rerank_model: str = ""  # unused; kept so an old .env does not fail to load
+    # Nothing below this cosine counts as an answer: better to say so than to invent one.
     min_relevance_score: float = 0.3
+    # ...and nothing much worse than the best hit does either. bge-m3 cosines sit in a narrow
+    # band (a random paragraph still scores ~0.45), so an absolute floor alone lets four
+    # padding chunks ride along behind one good one. This keeps a chunk only while it stays
+    # within RELATIVE_CUTOFF of the best chunk found, which is what makes the number of
+    # sources vary with the question instead of always being TOP_K_FINAL.
+    relative_cutoff: float = 0.85
+    # "GPA", "rớt môn", "hoc phan" -> the wording the regulation itself uses.
+    glossary_expansion: bool = True
+    glossary_for_dense: bool = True
+    # "Điều 15 nói gì?" -> fetch Điều 15 directly instead of hoping the vectors agree.
+    article_lookup: bool = True
+    # Widen each kept chunk with its neighbours in the same article (15.3 answers with 15.4).
+    context_expansion: bool = True
+    context_neighbours: int = 2
+    # Repeated questions skip the embedding call.
+    query_cache_size: int = 256
+
+    # --- generation ---
     llm_temperature: float = 0.2
     max_context_tokens: int = 4000
     # OpenAI-compatible endpoint; empty means Ollama's (<OLLAMA_URL>/v1). Point it at vLLM later.
@@ -39,6 +70,15 @@ class Settings(BaseSettings):
     llm_disable_thinking: bool = True
     # Past user/assistant turns sent along with a follow-up question.
     history_turns: int = 3
+    # A follow-up is rewritten into a standalone question before searching. That is an extra
+    # LLM round trip, so it is skipped when the question already stands on its own.
+    rewrite_follow_ups: bool = True
+
+    # --- operations ---
+    # Questions, latency and whether an answer was found, appended as JSON lines. This is what
+    # tells you which questions the corpus cannot answer; see GET /metrics.
+    log_queries: bool = True
+    log_dir: str = "data/logs"
 
     @property
     def use_openai(self) -> bool:

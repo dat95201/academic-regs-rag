@@ -313,7 +313,7 @@ def report(markdown: str) -> list[str]:
         nums = [int(n) for n in re.findall(pattern, markdown, re.M)]
         expected = list(range(1, max(nums, default=0) + 1))
         missing = sorted(set(expected) - set(nums))
-        out_of_order = [b for a, b in zip(nums, nums[1:]) if b != a + 1]
+        out_of_order = [b for a, b in zip(nums, nums[1:], strict=False) if b != a + 1]
         if missing or out_of_order:
             problems.append(f"{label}: missing {missing}, out of order after {out_of_order}")
     unreadable = len(re.findall(r"<!-- ref: [^|]*\?", markdown))

@@ -1,0 +1,74 @@
+\section{Giới thiệu}
+
+\subsection{Bối cảnh}
+
+Mỗi năm, Trường Đại học Bách khoa – ĐHQG-HCM tiếp nhận hàng nghìn sinh viên mới, và mỗi sinh
+viên trong suốt khoá học đều phải tra cứu quy định học vụ ít nhất vài chục lần: đăng ký tối
+thiểu bao nhiêu tín chỉ, bị cảnh báo học tập trong trường hợp nào, điểm chữ quy đổi ra thang 4
+thế nào, điều kiện xét tốt nghiệp gồm những gì, rút học phần trước thời điểm nào thì không bị
+tính học phí.
+
+Nguồn tra cứu chính thức là văn bản \emph{“Quy định về học vụ và đào tạo bậc đại học – Phiên
+bản hợp nhất”} (số 285/ĐHBK-ĐT, ban hành ngày 28/7/2022). Đây là một văn bản hợp nhất từ bốn
+nguồn: Thông tư 08/2021/TT-BGDĐT, Thông tư 17/2021/TT-BGDĐT, Quy định chung về học vụ và đào
+tạo (QĐ 2931/QĐ-ĐHBK), và Quy định học vụ bậc đại học (QĐ 2933/QĐ-ĐHBK). Văn bản dài 57 trang,
+gồm 10 chương, 42 điều và 15 phụ lục; mỗi đoạn đều kèm chú thích ở lề phải ghi rõ nội dung đó
+bắt nguồn từ văn bản gốc nào.
+
+Trong thực tế, rất ít sinh viên đọc hết 57 trang này. Họ hỏi bạn bè, hỏi trên các nhóm mạng xã
+hội, hoặc hỏi trực tiếp cố vấn học tập và Phòng Đào tạo. Hệ quả là thông tin truyền miệng sai
+lệch lan rộng (“học lại là bị khoá điểm cũ”, “nợ 3 môn là bị đuổi”), còn cán bộ phải trả lời đi
+trả lời lại cùng một nhóm câu hỏi.
+
+\subsection{Phát biểu bài toán}
+
+Một trợ lý hỏi đáp tự động là giải pháp tự nhiên, nhưng dùng thẳng một mô hình ngôn ngữ lớn
+(LLM) cho bài toán này là không chấp nhận được: mô hình sẽ trả lời trôi chảy kể cả khi nó không
+biết, và với văn bản quy phạm thì một con số bịa (“tối đa 14 học kỳ” thay vì 12) nguy hiểm hơn
+nhiều so với việc không trả lời. Bài toán vì vậy có bốn ràng buộc:
+
+\begin{enumerate}
+  \item \textbf{Chỉ trả lời dựa trên văn bản.} Mọi câu trả lời phải bắt nguồn từ nội dung thực
+  sự có trong quy định, không suy đoán, không dùng kiến thức chung.
+  \item \textbf{Truy vết được.} Người đọc phải kiểm chứng được ngay: mỗi ý kèm trích dẫn
+  Điều/Khoản, và mở được đúng đoạn văn bản gốc cùng số trang trong PDF.
+  \item \textbf{Biết nói “không biết”.} Khi văn bản không đề cập, hệ thống phải từ chối thay vì
+  bịa.
+  \item \textbf{Chạy được tại chỗ.} Dữ liệu học vụ là dữ liệu nội bộ; hệ thống phải chạy hoàn
+  toàn trên hạ tầng của trường, không bắt buộc gửi câu hỏi ra dịch vụ bên ngoài.
+\end{enumerate}
+
+\subsection{Mục tiêu và phạm vi}
+
+\textbf{Mục tiêu.} Xây dựng một hệ thống Retrieval-Augmented Generation (RAG) hoàn chỉnh, chạy
+local, trả lời câu hỏi về quy định học vụ bằng tiếng Việt kèm trích dẫn kiểm chứng được; đồng
+thời đo được chất lượng truy xuất một cách định lượng thay vì cảm tính.
+
+\textbf{Phạm vi.} Đồ án tập trung vào một văn bản quy định học vụ hợp nhất, nhưng toàn bộ
+pipeline được thiết kế đa tài liệu: thêm văn bản mới chỉ cần bỏ file vào thư mục nguồn và chạy
+lại lệnh nạp dữ liệu. Phạm vi \emph{không} bao gồm xác thực người dùng, tích hợp với hệ thống
+MyBK, và tra cứu dữ liệu cá nhân của sinh viên (điểm số, thời khoá biểu).
+
+\subsection{Đóng góp chính}
+
+So với một pipeline RAG mẫu, hệ thống có năm điểm được thiết kế riêng cho bài toán văn bản quy
+phạm tiếng Việt:
+
+\begin{itemize}
+  \item \textbf{Phân mảnh bám cấu trúc pháp lý.} Đơn vị phân mảnh là Điều/Phụ lục chứ không
+  phải cửa sổ trượt N ký tự; bảng biểu không bao giờ bị cắt đôi.
+  \item \textbf{BM25 viết riêng cho tiếng Việt.} Chỉ mục theo âm tiết và bigram âm tiết, thay
+  cho các mô hình BM25 sẵn có vốn stemming theo tiếng Anh.
+  \item \textbf{Mở rộng thuật ngữ sinh viên → văn bản.} Bảng tra ánh xạ cách nói đời thường
+  (“GPA”, “rớt môn”, “đuổi học”) và cả câu hỏi gõ không dấu sang đúng thuật ngữ trong quy định.
+  \item \textbf{Rerank không cần cross-encoder.} Chấm lại ứng viên bằng các tín hiệu mà tìm
+  kiếm vector bỏ qua, giữ nguyên yêu cầu không thêm mô hình nặng.
+  \item \textbf{Soát trích dẫn tự động.} Mọi trích dẫn trong câu trả lời được đối chiếu với các
+  Điều thực sự nằm trong ngữ cảnh; trích dẫn không có căn cứ bị đánh dấu cảnh báo.
+\end{itemize}
+
+Ngoài phần hệ thống, đồ án còn xây dựng bộ công cụ đánh giá gồm 30 câu hỏi vàng và một harness
+đo \code{recall@k}, \code{hit@final}, \code{MRR}, cho phép bật/tắt từng kỹ thuật để đo đóng góp
+riêng của nó.
+
+\chapterbreak

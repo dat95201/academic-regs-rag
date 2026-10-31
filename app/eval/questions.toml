@@ -1,0 +1,134 @@
+# Golden set: a question, and the article(s) that actually answer it.
+#
+# `expect` lists every acceptable article - a question answered by either Điều 29 or Phụ lục 4
+# lists both. Retrieval is correct if ANY of them comes back.
+#
+# Add a row whenever someone asks something the system got wrong; that is how this file earns
+# its keep. data/logs/queries.jsonl (GET /metrics) shows what people actually ask.
+#
+#   docker compose exec app python -m app.eval.run
+#   docker compose exec app python -m app.eval.run --compare
+
+[[question]]
+ask = "Thời gian đào tạo tối đa của hệ chính quy là bao nhiêu học kỳ?"
+expect = ["Điều 5"]
+
+[[question]]
+ask = "Sinh viên vừa làm vừa học được đào tạo tối đa bao nhiêu học kỳ chính?"
+expect = ["Điều 5"]
+
+[[question]]
+ask = "Khi nào sinh viên bị cảnh báo học tập?"
+expect = ["Điều 37"]
+
+[[question]]
+ask = "Bị cảnh báo học tập mấy học kỳ liên tiếp thì buộc thôi học?"
+expect = ["Điều 37"]
+
+[[question]]
+ask = "Một học kỳ chính sinh viên chính quy phải đăng ký tối thiểu bao nhiêu tín chỉ?"
+expect = ["Điều 15"]
+
+[[question]]
+ask = "Điểm A+ được quy đổi thành bao nhiêu khi tính điểm trung bình?"
+expect = ["Điều 20"]
+
+[[question]]
+ask = "Thang điểm chữ xếp loại học phần gồm những mức nào?"
+expect = ["Điều 17"]
+
+[[question]]
+ask = "Điểm I nghĩa là gì?"
+expect = ["Điều 17", "Điều 21"]
+
+[[question]]
+ask = "Điểm W trong bảng điểm nghĩa là gì?"
+expect = ["Điều 17", "Điều 16"]
+
+[[question]]
+ask = "Xếp loại học lực giỏi cần điểm trung bình bao nhiêu?"
+expect = ["Điều 20"]
+
+[[question]]
+ask = "Điều kiện để được công nhận tốt nghiệp là gì?"
+expect = ["Điều 31"]
+
+[[question]]
+ask = "Sau bao lâu kể từ khi đủ điều kiện thì sinh viên được cấp bằng tốt nghiệp?"
+expect = ["Điều 31"]
+
+[[question]]
+ask = "Thời hạn yêu cầu chấm phúc tra bài thi là bao lâu?"
+expect = ["Điều 28"]
+
+[[question]]
+ask = "Sinh viên được nghỉ học tạm thời trong những trường hợp nào?"
+expect = ["Điều 32"]
+
+[[question]]
+ask = "Nghỉ học tạm thời vì lý do cá nhân được tối đa bao nhiêu học kỳ?"
+expect = ["Điều 32"]
+
+[[question]]
+ask = "Điều kiện để đăng ký học ngành thứ hai?"
+expect = ["Điều 34"]
+
+[[question]]
+ask = "Rút đăng ký học phần phải thực hiện trước thời điểm nào?"
+expect = ["Điều 16"]
+
+[[question]]
+ask = "Vắng thi không có lý do chính đáng thì nhận điểm gì?"
+expect = ["Điều 21"]
+
+[[question]]
+ask = "Học lại để cải thiện điểm thì lấy điểm nào làm điểm chính thức?"
+expect = ["Điều 22"]
+
+[[question]]
+ask = "Xếp trình độ năm thứ hai cần bao nhiêu tín chỉ tích lũy?"
+expect = ["Điều 24"]
+
+[[question]]
+ask = "Một năm học có mấy học kỳ?"
+expect = ["Điều 6"]
+
+[[question]]
+ask = "Chuẩn ngoại ngữ tốt nghiệp của chương trình đại trà là bao nhiêu TOEIC?"
+expect = ["Phụ lục 7"]
+
+[[question]]
+ask = "Cấu trúc mã số học phần gồm những phần nào?"
+expect = ["Phụ lục 1"]
+
+[[question]]
+ask = "Khen thưởng lúc tốt nghiệp gồm những loại nào?"
+expect = ["Phụ lục 3"]
+
+[[question]]
+ask = "Quy định hoàn trả học phí như thế nào?"
+expect = ["Phụ lục 5", "Điều 29"]
+
+[[question]]
+ask = "Điều 15 quy định về việc gì?"
+expect = ["Điều 15"]
+note = "exercises the exact-article lookup"
+
+[[question]]
+ask = "GPA dưới bao nhiêu thì bị cảnh cáo?"
+expect = ["Điều 37"]
+note = "exercises the glossary: GPA, cảnh cáo"
+
+[[question]]
+ask = "rớt nhiều môn có bị đuổi học không?"
+expect = ["Điều 37"]
+note = "exercises the glossary: slang"
+
+[[question]]
+ask = "dong hoc phi tre thi sao"
+expect = ["Điều 29", "Điều 30", "Phụ lục 4", "Phụ lục 5"]
+note = "exercises the glossary: typed without diacritics"
+
+[[question]]
+ask = "Sinh viên được miễn học Giáo dục Thể chất khi nào?"
+expect = ["Điều 15", "Điều 31"]

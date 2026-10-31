@@ -27,19 +27,21 @@ from qdrant_client import models
 from app.config import Settings, get_settings
 from app.ingest import chunk as chunking
 from app.ingest.parse import prepare
-from app.rag.embeddings import OllamaEmbedder, bm25_document
+from app.rag.embeddings import OllamaEmbedder, bm25_document, corpus_avg_len
 from app.rag.store import DENSE, SPARSE, QdrantStore
 
 log = logging.getLogger("ingest")
 
 # Bump when chunk.py changes in a way that changes the chunks.
-CHUNKER_VERSION = "1"
+CHUNKER_VERSION = "2"
 
 
-def fingerprint(md: Path, settings: Settings) -> str:
+def fingerprint(md: Path, settings: Settings, avg_len: float) -> str:
     h = hashlib.sha256(md.read_bytes())
+    # avg_len enters the BM25 weights, so it belongs in the fingerprint - but bucketed, or
+    # adding one document would re-embed every other document for a drift of a few syllables.
     h.update(f"|{CHUNKER_VERSION}|{settings.chunk_max_tokens}|{settings.chunk_overlap_tokens}"
-             f"|{settings.embed_model}|{settings.hybrid_search}".encode())
+             f"|{settings.embed_model}|{settings.hybrid_search}|{round(avg_len / 50)}".encode())
     return h.hexdigest()
 
 
@@ -47,11 +49,12 @@ def load_manifest(path: Path) -> dict[str, str]:
     return json.loads(path.read_text()) if path.exists() else {}
 
 
-def to_points(chunks: list[chunking.Chunk], vectors: list[list[float]], settings: Settings):
-    for c, vector in zip(chunks, vectors):
+def to_points(chunks: list[chunking.Chunk], vectors: list[list[float]], settings: Settings,
+              avg_len: float):
+    for c, vector in zip(chunks, vectors, strict=True):
         vec: dict = {DENSE: vector}
         if settings.hybrid_search:
-            indices, values = bm25_document(c.embed_text)
+            indices, values = bm25_document(c.embed_text, avg_len)
             vec[SPARSE] = models.SparseVector(indices=indices, values=values)
         payload = asdict(c) | {"embed_model": settings.embed_model}
         yield models.PointStruct(id=c.chunk_id, vector=vec, payload=payload)
@@ -74,16 +77,24 @@ def ingest(settings: Settings | None = None, force: bool = False, dry_run: bool 
     if fresh or force or store.count() == 0:
         manifest = {}  # the collection does not hold what the manifest describes
 
-    stats = {"added_or_updated": [], "unchanged": [], "removed": [], "chunks": 0}
+    # Chunk everything first: the BM25 document weights need the average chunk length of the
+    # whole corpus, not of whichever document happens to be processed first.
+    chunked = [(md, chunking.chunk_file(md, settings.chunk_max_tokens,
+                                        settings.chunk_overlap_tokens)) for md in files]
+    avg_len = corpus_avg_len([c.embed_text for _, cs in chunked for c in cs])
+    log.info("%d document(s), %d chunks, average length %.0f syllables",
+             len(chunked), sum(len(cs) for _, cs in chunked), avg_len)
+
+    stats = {"added_or_updated": [], "unchanged": [], "removed": [], "chunks": 0,
+             "avg_chunk_len": round(avg_len)}
     seen: set[str] = set()
-    for md in files:
-        chunks = chunking.chunk_file(md, settings.chunk_max_tokens, settings.chunk_overlap_tokens)
+    for md, chunks in chunked:
         if not chunks:
             log.warning("%s: no chunks", md.name)
             continue
         doc_id = chunks[0].doc_id
         seen.add(doc_id)
-        fp = fingerprint(md, settings)
+        fp = fingerprint(md, settings, avg_len)
         if manifest.get(doc_id) == fp:
             stats["unchanged"].append(doc_id)
             continue
@@ -94,7 +105,7 @@ def ingest(settings: Settings | None = None, force: bool = False, dry_run: bool 
             continue
         vectors = embedder.embed([c.embed_text for c in chunks])
         store.delete_doc(doc_id)  # drops chunks that no longer exist after an edit
-        store.upsert(to_points(chunks, vectors, settings))
+        store.upsert(to_points(chunks, vectors, settings, avg_len))
         manifest[doc_id] = fp
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
         manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))

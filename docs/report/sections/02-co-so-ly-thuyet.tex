@@ -1,0 +1,94 @@
+\section{Cơ sở lý thuyết}
+
+\subsection{Mô hình ngôn ngữ lớn và hiện tượng ảo giác}
+
+LLM được huấn luyện để dự đoán token kế tiếp sao cho văn bản sinh ra có xác suất cao. Mục tiêu
+này không ràng buộc tính đúng đắn: khi tham số của mô hình không chứa thông tin cần thiết, mô
+hình vẫn sinh ra câu trả lời trôi chảy nhưng sai — hiện tượng được gọi là \emph{hallucination}
+(ảo giác). Với văn bản quy phạm, rủi ro còn cao hơn vì mô hình đã gặp rất nhiều quy chế của các
+trường khác trong dữ liệu huấn luyện, nên nó có xu hướng “trả lời theo mẫu chung” thay vì theo
+đúng quy định của một trường cụ thể.
+
+\subsection{Retrieval-Augmented Generation}
+
+RAG \cite{lewis2020} tách bài toán làm hai: một bộ \emph{truy xuất} tìm các đoạn văn bản liên
+quan từ kho tri thức, rồi một bộ \emph{sinh} viết câu trả lời \textbf{chỉ dựa trên} các đoạn
+đó. Tri thức nằm ngoài tham số mô hình nên có thể cập nhật bằng cách nạp lại dữ liệu, không cần
+huấn luyện lại; và vì câu trả lời gắn với đoạn trích cụ thể nên có thể kiểm chứng.
+
+Điểm mấu chốt thường bị bỏ qua: \textbf{chất lượng của RAG bị chặn trên bởi chất lượng truy
+xuất}. Nếu đoạn văn chứa đáp án không được lấy về, không mô hình nào cứu được câu trả lời. Vì
+vậy phần lớn công sức của đồ án này nằm ở bộ truy xuất chứ không ở prompt.
+
+\subsection{Biểu diễn dày (dense embedding)}
+
+Mô hình embedding ánh xạ một đoạn văn thành vector số thực trong không gian nhiều chiều, sao
+cho hai đoạn gần nghĩa thì gần nhau theo độ đo cosine. Ưu điểm là bắt được cách diễn đạt khác
+nhau: câu hỏi “học bao lâu thì bị buộc nghỉ” vẫn gần với đoạn viết “hết thời gian đào tạo tối
+đa”. Nhược điểm là mờ với chi tiết chính xác — con số, mã học phần, số hiệu điều khoản đều bị
+“làm mịn” trong vector.
+
+Hệ thống dùng \code{bge-m3} \cite{bgem3}, mô hình đa ngôn ngữ dựa trên XLM-RoBERTa
+\cite{xlmr}, vector 1024 chiều, hỗ trợ tiếng Việt tốt và chạy được trên CPU.
+
+\subsection{Biểu diễn thưa và BM25}
+
+BM25 \cite{bm25} là hàm xếp hạng dựa trên tần suất từ khoá, vẫn là chuẩn mực của tìm kiếm văn
+bản sau hơn ba thập kỷ. Điểm của một tài liệu $D$ với truy vấn $Q$:
+
+\[
+\mathrm{score}(D,Q) \;=\; \sum_{q \in Q} \mathrm{IDF}(q)\cdot
+\frac{f(q,D)\,(k_1+1)}{f(q,D) + k_1\left(1-b+b\,\dfrac{|D|}{\mathrm{avgdl}}\right)}
+\]
+
+trong đó $f(q,D)$ là tần suất từ $q$ trong $D$, $|D|$ là độ dài tài liệu, $\mathrm{avgdl}$ là
+độ dài trung bình của kho, còn $k_1$ và $b$ là tham số điều chỉnh (thường 1,2 và 0,75). BM25
+mạnh ở đúng chỗ dense yếu: nó khớp chính xác mặt chữ, và thành phần IDF tự động cho trọng số
+cao với từ hiếm — chính là các thuật ngữ chuyên ngành như “phúc tra”, “nợ đọng”, “hậu kiểm”.
+
+\subsection{Tìm kiếm lai và hợp nhất thứ hạng}
+
+Vì dense và sparse mạnh ở hai mặt bù trừ nhau, thực hành phổ biến là chạy cả hai rồi hợp nhất.
+Phương pháp thông dụng nhất là \emph{Reciprocal Rank Fusion} (RRF) \cite{rrf}:
+
+\[
+\mathrm{RRF}(d) \;=\; \sum_{i} \frac{w_i}{k + \mathrm{rank}_i(d)}, \qquad k = 60
+\]
+
+RRF chỉ dùng \textbf{thứ hạng}, không dùng điểm số, nên không cần chuẩn hoá hai thang điểm hoàn
+toàn khác nhau (cosine $\in [-1,1]$ và BM25 $\in [0,+\infty)$). Đây vừa là ưu điểm vừa là nhược
+điểm: thông tin về \emph{mức độ} liên quan bị vứt bỏ. Mục~\ref{sec:fusion} trình bày cách hệ
+thống giữ lại thông tin đó.
+
+\subsection{Rerank}
+
+Bộ truy xuất thường lấy về nhiều ứng viên hơn mức cần (ví dụ 20) rồi dùng một mô hình mạnh hơn
+chấm lại để chọn ra 5 đoạn tốt nhất. Chuẩn mực là \emph{cross-encoder}: đưa cặp (câu hỏi, đoạn
+văn) vào cùng một mô hình Transformer để mô hình nhìn thấy cả hai cùng lúc — chính xác hơn hẳn
+so với so sánh hai vector độc lập, nhưng chi phí tính toán tỉ lệ với số ứng viên.
+
+Trong bối cảnh đồ án, máy đã phải nuôi một LLM và một mô hình embedding trên CPU; thêm
+\code{bge-reranker-v2-m3} nghĩa là thêm PyTorch và khoảng 2\,GB bộ nhớ. Mục~\ref{sec:rerank}
+trình bày phương án thay thế không cần mô hình.
+
+\subsection{Thách thức riêng của tiếng Việt và văn bản quy phạm}
+
+\begin{itemize}
+  \item \textbf{Ranh giới từ.} Tiếng Việt viết rời theo âm tiết; “học phần” là một từ nhưng là
+  hai token khi tách theo khoảng trắng. Các thư viện BM25 có sẵn (ví dụ mô hình
+  \code{Qdrant/bm25} của fastembed) áp dụng stemming và danh sách stopword tiếng Anh, làm hỏng
+  hoàn toàn tiếng Việt.
+  \item \textbf{Dấu thanh.} Người dùng thường gõ không dấu (“hoc phan khong dat”). Chuỗi không
+  dấu không khớp bất kỳ token có dấu nào trong chỉ mục.
+  \item \textbf{Khoảng cách ngôn ngữ.} Sinh viên dùng tiếng lóng và viết tắt; văn bản dùng
+  thuật ngữ pháp lý đầy đủ. “Rớt môn” không xuất hiện một lần nào trong 57 trang quy định.
+  \item \textbf{Cấu trúc phân cấp.} Ý nghĩa của khoản 5.2 phụ thuộc vào Điều 5 và Chương 2 chứa
+  nó. Cắt văn bản theo cửa sổ ký tự cố định sẽ làm mất ngữ cảnh phân cấp này.
+  \item \textbf{Bảng biểu mang dữ liệu chính.} Nhiều đáp án quan trọng nằm trong bảng (thời
+  gian đào tạo theo loại hình, thang quy đổi điểm chữ, chuẩn ngoại ngữ). Bảng bị cắt đôi là đáp
+  án bị mất.
+  \item \textbf{Bản scan.} PDF gốc 19\,MB là ảnh quét, không có lớp văn bản; buộc phải OCR, và
+  chú thích nguồn gốc ở lề phải dễ bị trộn lẫn vào thân bài.
+\end{itemize}
+
+\chapterbreak

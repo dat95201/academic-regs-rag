@@ -1,0 +1,93 @@
+\appendix
+% Phụ lục đánh A, B, C và hiện đủ chữ "Phụ lục" cả ở tiêu đề lẫn mục lục.
+\renewcommand{\thesection}{Phụ lục~\Alph{section}}
+\setcounter{section}{0}
+\addtolength{\cftsecnumwidth}{3.4em}
+
+\section{Cấu trúc mã nguồn}
+
+\begin{codeblock}
+academic-regs-rag/
+├── app/
+│   ├── config.py              cấu hình từ biến môi trường, có kiểu
+│   ├── api/
+│   │   ├── main.py            15 endpoint HTTP, luồng SSE
+│   │   ├── library.py         đọc văn bản: mục lục, toàn văn một Điều, PDF gốc
+│   │   └── telemetry.py       nhật ký truy vấn và phản hồi, thống kê sử dụng
+│   ├── ingest/
+│   │   ├── ocr.py             OCR hai độ phân giải, tách chú thích lề
+│   │   ├── parse.py           PDF có text layer / DOCX / TXT -> Markdown
+│   │   ├── chunk.py           phân mảnh bám cấu trúc Chương -> Điều -> khoản
+│   │   └── run.py             nạp dữ liệu tăng dần, manifest, dấu vân tay
+│   ├── rag/
+│   │   ├── glossary.py        mở rộng thuật ngữ, xử lý câu hỏi không dấu
+│   │   ├── citations.py       bắt số Điều trong câu hỏi, soát trích dẫn
+│   │   ├── embeddings.py      dense qua Ollama + BM25 cho tiếng Việt
+│   │   ├── store.py           Qdrant: schema, truy vấn theo lô, lọc payload
+│   │   ├── retriever.py       mở rộng -> tìm -> hợp nhất -> rerank -> ngữ cảnh
+│   │   ├── rerank.py          rerank heuristic + rerank bằng LLM (tuỳ chọn)
+│   │   ├── prompt.py          prompt tiếng Việt, lắp ngữ cảnh theo ngân sách
+│   │   ├── llm.py             client tương thích OpenAI, lọc khối <think>
+│   │   └── chat.py            một lượt hỏi đáp dưới dạng luồng sự kiện
+│   ├── eval/
+│   │   ├── questions.toml     30 câu hỏi vàng
+│   │   └── run.py             đo recall@k / hit@final / MRR, chế độ sweep
+│   └── static/
+│       ├── index.html         trang hỏi đáp
+│       ├── browse.html        trang tra cứu toàn văn
+│       ├── debug.html         trang chẩn đoán truy xuất
+│       └── style.css          giao diện dùng chung, sáng/tối
+├── tests/                     69 test, không cần Ollama/Qdrant
+├── data/
+│   ├── raw/                   PDF gốc
+│   ├── processed/             Markdown đã rà soát  <- nguồn chân lý
+│   └── logs/                  nhật ký truy vấn, phản hồi
+├── docs/report/               mã nguồn LaTeX của báo cáo này
+├── docker-compose.yml         ba dịch vụ, healthcheck, volume
+├── start.sh / start.ps1       một lệnh từ bản sao sạch tới hệ thống chạy được
+├── Makefile                   up · ingest · test · eval · eval-sweep · metrics
+└── README.md, docs/architecture.md
+\end{codeblock}
+
+\section{Danh mục API}
+
+{\sffamily\small
+\begin{longtable}{@{}p{0.08\textwidth} p{0.27\textwidth} p{0.55\textwidth}@{}}
+\caption{Danh mục API.}\label{tab:api}\\
+\toprule
+\textbf{Method} & \textbf{Đường dẫn} & \textbf{Chức năng} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Method} & \textbf{Đường dẫn} & \textbf{Chức năng} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+GET  & \code{/} & Trang hỏi đáp \\
+GET  & \code{/browse} & Trang tra cứu toàn văn \\
+GET  & \code{/debug} & Trang chẩn đoán truy xuất \\
+POST & \code{/chat} & Một lượt hỏi đáp, trả về luồng SSE: \code{query? → retrieved → token* → sources → done} \\
+GET  & \code{/search} & Kết quả truy xuất kèm điểm từng nhánh; \code{final=true} chạy đủ pipeline \\
+GET  & \code{/toc} & Mục lục mọi văn bản đã nạp \\
+GET  & \code{/article} & Toàn văn một Điều/Phụ lục, tách theo khoản \\
+GET  & \code{/source/\{doc\_id\}} & PDF gốc, mở inline để nhảy tới \code{\#page=N} \\
+POST & \code{/feedback} & Ghi nhận phản hồi kèm câu hỏi và nguồn đã dùng \\
+GET  & \code{/metrics} & Tỉ lệ trả lời được, độ trễ p50/p95, câu hỏi không có đáp án \\
+GET  & \code{/config} & Tham số truy xuất đang áp dụng (không chứa khoá bí mật) \\
+GET  & \code{/health} & Ollama, model, Qdrant, dữ liệu — 200 hoặc 503 kèm lý do \\
+GET  & \code{/livez} & Tiến trình còn sống (healthcheck của container) \\
+POST & \code{/ingest} & Kích hoạt nạp dữ liệu chạy nền \\
+GET  & \code{/ingest} & Trạng thái lần nạp gần nhất \\
+\end{longtable}
+}
+
+\section{Biên dịch báo cáo}
+
+Mã nguồn LaTeX của báo cáo nằm trong \code{docs/report/}. Bắt buộc dùng XeLaTeX vì báo cáo dùng
+font hệ thống và tiếng Việt Unicode.
+
+\begin{codeblock}
+cd docs/report
+./build.sh            # dùng xelatex nếu máy đã cài, nếu không thì dùng Docker
+\end{codeblock}

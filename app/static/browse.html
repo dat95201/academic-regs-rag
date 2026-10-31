@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tra cứu quy chế học vụ</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>Tra cứu quy chế</h1>
+  <a class="btn" href="/">💬 <span class="text">Hỏi đáp</span></a>
+  <button id="theme" class="btn icon" type="button" title="Đổi giao diện sáng/tối">◐</button>
+</header>
+
+<main>
+  <div class="wrap layout">
+    <nav class="panel toc" id="toc" aria-label="Mục lục">
+      <input type="search" id="filter" placeholder="Lọc theo điều, chương, từ khoá…" autofocus>
+      <div id="tree"></div>
+    </nav>
+    <article class="panel" id="content">
+      <p class="note">Chọn một Điều hoặc Phụ lục ở danh sách bên trái.</p>
+    </article>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const theme = {
+    get: () => { try { return localStorage.getItem("regs-theme") || "auto"; } catch { return "auto"; } },
+    set(v) {
+      try { localStorage.setItem("regs-theme", v); } catch {}
+      if (v === "auto") document.documentElement.removeAttribute("data-theme");
+      else document.documentElement.setAttribute("data-theme", v);
+      $("theme").textContent = { auto: "◐", light: "☀", dark: "☾" }[v];
+    },
+  };
+  theme.set(theme.get());
+  $("theme").addEventListener("click", () => {
+    theme.set({ auto: "light", light: "dark", dark: "auto" }[theme.get()]);
+  });
+
+  let docs = [];
+  let current = null;
+
+  function renderTree(query = "") {
+    const needle = query.trim().toLowerCase();
+    const keep = (e) => !needle || `${e.article} ${e.title || ""}`.toLowerCase().includes(needle);
+    const tree = $("tree");
+    tree.innerHTML = "";
+    for (const doc of docs) {
+      for (const chapter of doc.chapters) {
+        const items = chapter.articles.filter(keep);
+        if (!items.length) continue;
+        const h = document.createElement("h3");
+        h.textContent = chapter.chapter ? `${chapter.chapter}. ${chapter.title || ""}` : "Phần mở đầu";
+        tree.append(h);
+        for (const a of items) tree.append(link(doc, a));
+      }
+      const extras = doc.appendices.filter(keep);
+      if (extras.length) {
+        const h = document.createElement("h3");
+        h.textContent = "Phụ lục";
+        tree.append(h);
+        for (const a of extras) tree.append(link(doc, a));
+      }
+    }
+    if (!tree.children.length) tree.innerHTML = `<p class="note">Không có mục nào khớp.</p>`;
+  }
+
+  function link(doc, entry) {
+    const a = document.createElement("a");
+    a.href = `?article=${encodeURIComponent(entry.article)}`;
+    a.dataset.article = entry.article;
+    a.innerHTML = `${escapeHtml(entry.article)}<small>${escapeHtml(entry.title || "")} · trang ${entry.page}</small>`;
+    a.onclick = (e) => { e.preventDefault(); open(doc, entry.article); };
+    return a;
+  }
+
+  async function open(doc, article) {
+    current = article;
+    document.querySelectorAll("#tree a").forEach((a) =>
+      a.classList.toggle("active", a.dataset.article === article));
+    history.replaceState(null, "", `?article=${encodeURIComponent(article)}`);
+    const box = $("content");
+    box.innerHTML = `<p class="note">Đang tải…</p>`;
+    const resp = await fetch(`/article?doc_id=${encodeURIComponent(doc.doc_id)}&article=${encodeURIComponent(article)}`);
+    if (!resp.ok) { box.innerHTML = `<p class="error">Không tìm thấy ${escapeHtml(article)}.</p>`; return; }
+    const data = await resp.json();
+    const pages = data.page === data.page_end ? `trang ${data.page}` : `trang ${data.page}–${data.page_end}`;
+    const pdf = doc.has_pdf
+      ? `<a class="pdf" href="/source/${encodeURIComponent(doc.doc_id)}#page=${data.page}" target="_blank" rel="noopener">Mở PDF gốc tại ${pages}</a>`
+      : "";
+    const ask = `<a class="btn" href="/?q=${encodeURIComponent(article + " quy định gì?")}">💬 Hỏi về ${escapeHtml(article)}</a>`;
+    box.innerHTML = `
+      <div class="kv"><span>${escapeHtml(data.chapter || "")} ${escapeHtml(data.chapter_title || "")}</span><span>${pages}</span></div>
+      <h2 style="margin:6px 0 4px">${escapeHtml(data.article)}. ${escapeHtml(data.title || "")}</h2>
+      <div class="toolbar">${pdf}${ask}</div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+      ${data.sections.map(sectionHtml).join("")}`;
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function sectionHtml(s) {
+    const refs = (s.refs || []).length
+      ? `<div class="refs">Nguồn gốc: ${escapeHtml(s.refs.join("; "))}</div>` : "";
+    const body = s.text.split("\n").filter(Boolean).map((line) =>
+      line.startsWith("|") ? line : `<p>${escapeHtml(line)}</p>`).join("");
+    const table = tableHtml(s.text);
+    return `<div class="section excerpt" style="border:none;padding:0">
+      ${s.section ? `<h4>${escapeHtml(s.section)} ${escapeHtml(s.title || "")}</h4>` : ""}
+      ${refs}${table || body}</div>`;
+  }
+
+  // Markdown tables survive from the reviewed source; render them rather than printing pipes.
+  function tableHtml(text) {
+    const lines = text.split("\n");
+    if (!lines.some((l) => l.trim().startsWith("|"))) return "";
+    let out = "", buffer = [];
+    const flush = () => {
+      if (buffer.length < 2) { out += buffer.map((l) => `<p>${escapeHtml(l)}</p>`).join(""); buffer = []; return; }
+      const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => escapeHtml(c.trim()));
+      const head = cells(buffer[0]);
+      const rows = buffer.slice(2).map(cells);
+      out += `<table><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead>`
+        + `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+      buffer = [];
+    };
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (line.startsWith("|")) buffer.push(line);
+      else { flush(); out += `<p>${escapeHtml(line)}</p>`; }
+    }
+    flush();
+    return out;
+  }
+
+  (async () => {
+    docs = await (await fetch("/toc")).json();
+    if (!docs.length) {
+      $("tree").innerHTML = `<p class="note">Chưa có tài liệu nào trong data/processed.</p>`;
+      return;
+    }
+    renderTree();
+    $("filter").addEventListener("input", (e) => renderTree(e.target.value));
+    const wanted = new URLSearchParams(location.search).get("article");
+    if (wanted) open(docs[0], wanted);
+  })();
+})();
+</script>
+</body>
+</html>

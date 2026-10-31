@@ -1,0 +1,19 @@
+# Linting for the whole repository: ruff check .
+# 110 rather than 100: that is the width the code is actually written to.
+line-length = 110
+target-version = "py311"
+
+[lint]
+# BLE is selected on purpose: every broad `except Exception` in this codebase carries an
+# explicit `# noqa: BLE001` plus a reason, so the annotation stays load-bearing instead of
+# rotting into decoration.
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "BLE", "RUF"]
+ignore = [
+  "RUF001", "RUF002", "RUF003",  # Vietnamese text is full of "ambiguous" unicode on purpose
+  "RUF007",                      # zip(xs, xs[1:]) reads fine for syllable bigrams
+  "B008",                        # FastAPI declares dependencies in argument defaults
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E501"]
+"app/rag/prompt.py" = ["E501"]  # the prompt is Vietnamese prose, not code

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chẩn đoán truy xuất</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>Chẩn đoán truy xuất</h1>
+  <a class="btn" href="/">💬 <span class="text">Hỏi đáp</span></a>
+  <a class="btn" href="/browse">📖 <span class="text">Tra cứu</span></a>
+  <button id="theme" class="btn icon" type="button">◐</button>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="note">Xem đúng những gì bộ truy xuất trả về trước khi mô hình viết câu trả lời:
+      điểm của từng nhánh, từ được mở rộng, điều được nhận diện, và chunk nào bị loại.
+      Dùng để chỉnh TOP_K, trọng số và ngưỡng mà không phải đoán.</p>
+
+    <form id="form" class="composer" style="margin:14px 0">
+      <input type="text" id="q" placeholder="Câu hỏi thử…" autofocus>
+      <label class="btn" title="Chạy full pipeline: lọc ngưỡng, rerank, mở rộng ngữ cảnh">
+        <input type="checkbox" id="final" checked style="margin-right:6px">Full pipeline
+      </label>
+      <button class="send" type="submit">Chạy</button>
+    </form>
+
+    <div id="summary"></div>
+    <div id="results"></div>
+
+    <details class="panel" style="margin-top:20px">
+      <summary><b>Cấu hình truy xuất đang áp dụng</b></summary>
+      <div id="config" class="kv" style="margin-top:10px"></div>
+    </details>
+    <details class="panel" style="margin-top:12px">
+      <summary><b>Thống kê sử dụng</b> — tỉ lệ trả lời được, độ trễ, câu hỏi không có đáp án</summary>
+      <div id="metrics" style="margin-top:10px"></div>
+    </details>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const theme = {
+    get: () => { try { return localStorage.getItem("regs-theme") || "auto"; } catch { return "auto"; } },
+    set(v) {
+      try { localStorage.setItem("regs-theme", v); } catch {}
+      if (v === "auto") document.documentElement.removeAttribute("data-theme");
+      else document.documentElement.setAttribute("data-theme", v);
+      $("theme").textContent = { auto: "◐", light: "☀", dark: "☾" }[v];
+    },
+  };
+  theme.set(theme.get());
+  $("theme").onclick = () => theme.set({ auto: "light", light: "dark", dark: "auto" }[theme.get()]);
+
+  const pill = (label, value) => `<span class="tag">${esc(label)}: <b>${esc(value)}</b></span>`;
+
+  function renderSummary(data) {
+    const bits = [
+      pill("ứng viên", data.candidates),
+      pill("thời gian", data.took_ms + "ms"),
+      data.gated ? `<span class="tag" style="color:var(--warn)">bị chặn bởi ngưỡng</span>` : "",
+      data.refs.length ? pill("điều nhận diện", data.refs.join(", ")) : "",
+      data.expanded.length ? pill("mở rộng", data.expanded.join(" · ")) : "",
+    ];
+    $("summary").innerHTML = `<div class="kv">${bits.filter(Boolean).join("")}</div>`;
+  }
+
+  function renderHits(hits) {
+    if (!hits.length) { $("results").innerHTML = `<p class="note">Không có kết quả nào.</p>`; return; }
+    const top = Math.max(...hits.map((h) => h.score)) || 1;
+    $("results").innerHTML = hits.map((h, i) => {
+      const origin = h.origin === "article" ? "tra theo số điều"
+        : h.origin === "context" ? "ngữ cảnh bổ sung" : "hybrid";
+      return `<div class="row">
+        <div>
+          <b>${i + 1}. ${esc(h.article || "—")}</b> ${esc(h.article_title || "")}
+          <span class="tag">${esc(origin)}</span>
+          <div class="note" style="margin:4px 0 0">trang ${esc(h.page)}${h.sections && h.sections.length ? " · mục " + esc(h.sections.join(", ")) : ""}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px">${esc(String(h.text || "").slice(0, 240))}…</div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:var(--muted);min-width:150px">
+          <div class="bar"><i style="width:${Math.round(100 * h.score / top)}%"></i></div>
+          <div style="margin-top:6px">fused <b>${h.score}</b></div>
+          <div>cosine ${h.cosine} · bm25 ${h.bm25}</div>
+          ${h.rerank != null ? `<div>rerank <b>${h.rerank}</b></div>` : ""}
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = $("q").value.trim();
+    if (q.length < 2) return;
+    $("results").innerHTML = `<p class="note">Đang tra cứu…</p>`;
+    try {
+      const url = `/search?q=${encodeURIComponent(q)}&k=20&final=${$("final").checked}`;
+      const data = await (await fetch(url)).json();
+      renderSummary(data);
+      renderHits(data.hits);
+    } catch (err) {
+      $("results").innerHTML = `<p class="error">Lỗi: ${esc(err.message || err)}</p>`;
+    }
+  });
+
+  (async () => {
+    try {
+      const cfg = await (await fetch("/config")).json();
+      $("config").innerHTML = Object.entries(cfg).map(([k, v]) => pill(k, v)).join("");
+    } catch {}
+    try {
+      const m = await (await fetch("/metrics")).json();
+      const unanswered = (m.top_unanswered || []).map(([q, n]) =>
+        `<tr><td>${esc(q)}</td><td>${n}</td></tr>`).join("");
+      $("metrics").innerHTML = `<div class="kv">
+          ${pill("lượt hỏi", m.turns)}${pill("trả lời được", m.answer_rate ?? "—")}
+          ${pill("độ trễ p50", m.latency_ms.p50 + "ms")}${pill("p95", m.latency_ms.p95 + "ms")}
+          ${pill("truy xuất p50", m.retrieval_ms.p50 + "ms")}
+          ${pill("👍", m.votes.up)}${pill("👎", m.votes.down)}
+          ${pill("trích dẫn đáng ngờ", m.unsupported_citation_turns)}
+          ${pill("cache embedding", `${m.query_cache.hits}/${m.query_cache.hits + m.query_cache.misses}`)}
+          ${pill("điểm trong Qdrant", m.points)}
+        </div>`
+        + (unanswered ? `<h3 style="font-size:14px;margin:14px 0 6px">Câu hỏi không tìm được nội dung</h3>
+            <table class="plain"><tbody>${unanswered}</tbody></table>` : "");
+    } catch {}
+  })();
+})();
+</script>
+</body>
+</html>

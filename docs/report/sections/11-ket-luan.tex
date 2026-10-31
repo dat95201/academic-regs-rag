@@ -1,0 +1,22 @@
+\section{Kết luận}
+
+Đồ án đã xây dựng hoàn chỉnh một hệ thống RAG tiếng Việt chạy tại chỗ cho bài toán tra cứu quy
+định học vụ, gồm 33 chức năng, khoảng 3.700 dòng Python và 1.000 dòng giao diện, được bảo vệ
+bởi 69 test tự động và một bộ đánh giá truy xuất 30 câu hỏi.
+
+Kết quả đo được trên hệ thống thật: Điều đúng xuất hiện trong danh sách ứng viên ở
+\textbf{100\%} số câu hỏi, sống sót qua toàn bộ pipeline để vào prompt ở \textbf{100\%}, và
+đứng ở vị trí đầu tiên trong hầu hết các trường hợp (\textbf{MRR = 0,967}). So với cấu hình chỉ
+dùng tìm kiếm vector, hit@5 tăng từ 0,900 lên 1,000 và MRR tăng từ 0,819 lên 0,967. Ngưỡng liên
+quan tương đối còn cắt được một phần tư số trích đoạn thừa mà không mất một điểm chất lượng
+nào.
+
+Điều nhóm cho là đáng giá nhất lại không phải các con số đó. Với một hệ thống tra cứu văn bản
+quy phạm, giá trị nằm ở chỗ người đọc \emph{kiểm chứng được} và hệ thống \emph{biết im lặng
+đúng lúc}: mỗi ý đều mở được ra đúng đoạn văn bản gốc và đúng trang PDF, trích dẫn không có căn
+cứ bị đánh dấu, và câu hỏi ngoài phạm vi nhận một lời từ chối thay vì một câu trả lời trôi
+chảy. Bốn chế độ hỏng được ghi lại ở mục~\ref{sec:chitiet} và phần bài học cho thấy đây không
+phải mối lo lý thuyết — cả bốn đều là lỗi khiến hệ thống trả lời tự tin và sai, và đều chỉ lộ
+ra khi có cơ chế đo đạc hoặc có người thật gõ một câu hỏi thật.
+
+\chapterbreak

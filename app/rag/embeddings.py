@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import re
+import threading
 import unicodedata
-from collections import Counter
+from collections import Counter, OrderedDict
 
 import httpx
 
@@ -17,12 +18,21 @@ def nfc(text: str) -> str:
 
 
 class OllamaEmbedder:
-    """Calls Ollama `POST /api/embed` in batches."""
+    """Calls Ollama `POST /api/embed` in batches.
+
+    Query vectors are cached: a class of students asks the same handful of questions, and on
+    CPU an embedding call is tens of milliseconds that need not be spent twice.
+    """
 
     def __init__(self, settings: Settings):
         self.model = settings.embed_model
         self.batch_size = settings.embed_batch_size
         self.client = httpx.Client(base_url=settings.ollama_url, timeout=settings.ollama_timeout_s)
+        self._cache: OrderedDict[str, list[float]] = OrderedDict()
+        self._cache_max = max(0, settings.query_cache_size)
+        self._lock = threading.Lock()
+        self.cache_hits = 0
+        self.cache_misses = 0
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         vectors: list[list[float]] = []
@@ -36,6 +46,23 @@ class OllamaEmbedder:
             resp.raise_for_status()
             vectors.extend(resp.json()["embeddings"])
         return vectors
+
+    def embed_query(self, text: str) -> list[float]:
+        key = nfc(text).strip()
+        if self._cache_max:
+            with self._lock:
+                if key in self._cache:
+                    self._cache.move_to_end(key)
+                    self.cache_hits += 1
+                    return self._cache[key]
+        vector = self.embed([key])[0]
+        if self._cache_max:
+            with self._lock:
+                self.cache_misses += 1
+                self._cache[key] = vector
+                while len(self._cache) > self._cache_max:
+                    self._cache.popitem(last=False)
+        return vector
 
     def dimension(self) -> int:
         return len(self.embed(["dimension probe"])[0])
@@ -51,12 +78,13 @@ class OllamaEmbedder:
 TOKEN_RE = re.compile(r"\w+")
 BM25_K1 = 1.2
 BM25_B = 0.75
-BM25_AVG_LEN = 400  # syllables in a typical chunk (~500 tokens)
+# Fallback when the corpus average is unknown; ingest measures the real one (see run.py).
+BM25_AVG_LEN = 400.0
 
 
 def _terms(text: str) -> tuple[list[str], int]:
     words = TOKEN_RE.findall(nfc(text).lower())
-    return words + [f"{a} {b}" for a, b in zip(words, words[1:])], len(words)
+    return words + [f"{a} {b}" for a, b in zip(words, words[1:], strict=False)], len(words)
 
 
 def _index(term: str) -> int:
@@ -71,9 +99,15 @@ def _merge(pairs: dict[str, float]) -> tuple[list[int], list[float]]:
     return list(merged), list(merged.values())
 
 
-def bm25_document(text: str) -> tuple[list[int], list[float]]:
+def corpus_avg_len(texts: list[str]) -> float:
+    """Mean syllable count of the chunks, the `avgdl` of the BM25 formula."""
+    lengths = [len(TOKEN_RE.findall(nfc(t).lower())) for t in texts]
+    return sum(lengths) / len(lengths) if lengths else BM25_AVG_LEN
+
+
+def bm25_document(text: str, avg_len: float = BM25_AVG_LEN) -> tuple[list[int], list[float]]:
     terms, length = _terms(text)
-    norm = BM25_K1 * (1 - BM25_B + BM25_B * length / BM25_AVG_LEN)
+    norm = BM25_K1 * (1 - BM25_B + BM25_B * length / max(avg_len, 1.0))
     weights = {t: tf * (BM25_K1 + 1) / (tf + norm) for t, tf in Counter(terms).items()}
     return _merge(weights)
 
@@ -81,4 +115,3 @@ def bm25_document(text: str) -> tuple[list[int], list[float]]:
 def bm25_query(text: str) -> tuple[list[int], list[float]]:
     terms, _ = _terms(text)
     return _merge({t: 1.0 for t in set(terms)})
-

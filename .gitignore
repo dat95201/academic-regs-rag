@@ -4,3 +4,13 @@ __pycache__/
 .env
 .venv/
 data/.ingest_manifest.json
+data/logs/
+
+# File trung gian của LaTeX (chạy docs/report/build.sh --clean để dọn)
+docs/report/*.aux
+docs/report/*.log
+docs/report/*.out
+docs/report/*.toc
+docs/report/*.fls
+docs/report/*.fdb_latexmk
+docs/_to_delete/

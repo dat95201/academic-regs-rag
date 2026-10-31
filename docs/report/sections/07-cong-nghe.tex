@@ -1,0 +1,47 @@
+\section{Công nghệ sử dụng}
+
+{\sffamily\small
+\begin{longtable}{@{}p{0.17\textwidth} p{0.27\textwidth} p{0.46\textwidth}@{}}
+\caption{Công nghệ sử dụng trong hệ thống.}\label{tab:congnghe}\\
+\toprule
+\textbf{Hạng mục} & \textbf{Công nghệ} & \textbf{Dùng để làm gì} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Hạng mục} & \textbf{Công nghệ} & \textbf{Dùng để làm gì} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+Mô hình & bge-m3 (BAAI) & Embedding dense 1024 chiều, đa ngôn ngữ \\
+        & qwen3:4b / gpt-4o-mini & Sinh câu trả lời; chế độ local hoặc cloud \\
+\addlinespace
+Phục vụ mô hình & Ollama & Chạy LLM và embedding local, API tương thích OpenAI \\
+\addlinespace
+Vector store & Qdrant v1.15 & Dense + sparse, IDF phía máy chủ, lọc payload, truy vấn theo lô \\
+\addlinespace
+Backend & FastAPI + Uvicorn & API HTTP, Server-Sent Events \\
+        & Pydantic Settings & Cấu hình từ biến môi trường, có kiểu và giá trị mặc định \\
+        & httpx & Gọi Ollama/OpenAI, hỗ trợ streaming \\
+\addlinespace
+Xử lý tài liệu & Tesseract OCR (gói \code{vie}) & Nhận dạng chữ tiếng Việt trên bản quét \\
+        & PyMuPDF & Dựng ảnh trang, phát hiện lớp văn bản, trích văn bản \\
+        & Pillow + NumPy & Khử bóng in ngược, che vùng lề trước khi OCR \\
+        & python-docx & Đọc tài liệu Word \\
+\addlinespace
+Giao diện & HTML/CSS/JS thuần & Ba trang, không framework, không CDN, hoạt động offline \\
+\addlinespace
+Hạ tầng & Docker + Docker Compose & Ba dịch vụ, healthcheck, volume bền vững \\
+        & Bash / PowerShell & Script khởi động một lệnh, tự dò GPU và Ollama native \\
+\addlinespace
+Chất lượng & pytest & 69 test, chạy không cần Ollama/Qdrant \\
+        & ruff & Lint và sắp xếp import \\
+        & Harness tự viết & Đo recall@k / hit@final / MRR trên bộ câu hỏi vàng \\
+\end{longtable}
+}
+
+Thuật toán tự cài đặt, không dùng thư viện: BM25 cho tiếng Việt, hợp nhất RRF có trọng số,
+rerank heuristic, phân mảnh bám cấu trúc, tách chú thích lề khi OCR, soát trích dẫn, trình dựng
+Markdown phía trình duyệt.
+
+\chapterbreak
