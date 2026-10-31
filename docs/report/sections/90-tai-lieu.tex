@@ -1,6 +1,8 @@
-\section*{Tài liệu tham khảo}
-\addcontentsline{toc}{section}{Tài liệu tham khảo}
-\markboth{Tài liệu tham khảo}{}
+% KHÔNG tự viết \section* ở đây: môi trường thebibliography của lớp article đã
+% tự sinh một \section*{\refname}, mà \refname được đổi thành "Tài liệu tham
+% khảo" trong preamble — viết thêm là ra hai tiêu đề trùng nhau.
+\addcontentsline{toc}{section}{\refname}
+\markboth{\refname}{}
 
 \begin{thebibliography}{99}
 \setlength{\itemsep}{0.35em}
