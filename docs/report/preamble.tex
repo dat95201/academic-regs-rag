@@ -27,11 +27,18 @@
 \usepackage{xurl}
 
 % --- Font ------------------------------------------------------------------
-% Pagella (bản TeX Gyre của Palatino) phủ đủ tiếng Việt và dễ đọc khi in dài.
-% Carlito dùng cho tiêu đề, bảng, chú thích hình. DejaVu Sans Mono cho mã nguồn.
+% Cả ba font đều thuộc TeX Gyre / TeX Live nên có sẵn ở mọi bản cài, và quan trọng
+% hơn: cả ba đều phủ ĐỦ bảng chữ tiếng Việt dựng sẵn (U+1EA0–U+1EF9).
+%   Pagella       — bản TeX Gyre của Palatino, thân bài, dễ đọc khi in dài.
+%   Heros         — bản TeX Gyre của Helvetica, tiêu đề/bảng/chú thích; nét sạch,
+%                   tương phản rõ với Pagella mà không ồn như font geometric.
+%   LM Mono       — mã nguồn. KHÔNG dùng DejaVu Sans Mono: font đó thiếu 21/49 ký
+%                   tự tiếng Việt dựng sẵn nên HarfBuzz phải tách thành ký tự nền +
+%                   dấu rời, và trong font đơn cách dấu chiếm hẳn một ô -> vỡ chữ
+%                   ("nếu" hiện thành "nêú").
 \setmainfont{TeX Gyre Pagella}[Ligatures=TeX]
-\setsansfont{Carlito}[Ligatures=TeX]
-\setmonofont{DejaVu Sans Mono}[Scale=0.82]
+\setsansfont{TeX Gyre Heros}[Ligatures=TeX, Scale=0.92]
+\setmonofont{Latin Modern Mono}[Scale=0.95]
 
 % --- Màu -------------------------------------------------------------------
 \definecolor{bkblue}{HTML}{1A4F8B}

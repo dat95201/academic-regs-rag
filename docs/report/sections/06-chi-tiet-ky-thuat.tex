@@ -25,18 +25,34 @@ là xử lý hai vùng riêng:
 
 Đơn vị nhỏ nhất không bao giờ bị cắt là một \emph{block} (đoạn văn, mục gạch đầu dòng, hoặc cả
 một bảng). Các block thuộc cùng một khoản tạo thành \emph{unit}; các unit thuộc cùng một
-Điều/Phụ lục tạo thành một nhóm. Thuật toán đóng gói từng nhóm:
+Điều/Phụ lục tạo thành một nhóm. Thuật toán đóng gói từng nhóm được trình bày bằng tiếng Anh
+dưới dạng mã giả, để tên tham số trong mã nguồn và tên trong báo cáo trùng khớp:
 
 \begin{codeblock}
-nếu tổng token của nhóm <= CHUNK_MAX_TOKENS:
-    cả Điều là MỘT chunk                            <- trường hợp lý tưởng
-ngược lại:
-    gom các khoản liên tiếp cho tới sát ngưỡng
-    nếu một khoản vẫn vượt ngưỡng:
-        phần mở đầu ngắn (<= 150 token) được GÁN KÈM vào khoản dài phía sau
-        cắt giữa các câu, chồng lấn CHUNK_OVERLAP_TOKENS
-        các mảnh sau mảnh đầu được chèn lại dòng tiêu đề + " (tiếp)"
-    không bao giờ kết thúc một chunk bằng một dòng tiêu đề trơ trọi
+PACK(group)                      # group = all units of one Article / Appendix
+  if tokens(group) <= CHUNK_MAX_TOKENS:
+      emit(group)                                  # ideal case: 1 Article = 1 chunk
+      return
+
+  buffer <- []                                     # greedy packing, clause by clause
+  for unit in group:
+      if tokens(buffer) + tokens(unit) <= CHUNK_MAX_TOKENS:
+          buffer.append(unit)
+      else:
+          emit(buffer); buffer <- [unit]
+
+      if tokens(unit) > CHUNK_MAX_TOKENS:          # a single clause is too long
+          if tokens(lead_in(unit)) <= 150:
+              merge lead_in into the long clause that follows
+          parts <- split_on_sentence_boundary(unit,
+                       overlap = CHUNK_OVERLAP_TOKENS)
+          for part in parts[1:]:
+              prepend(part, heading_line(unit) + " (tiếp)")
+          emit(parts)
+
+  emit(buffer)
+
+INVARIANT  no chunk may end with a bare heading line
 \end{codeblock}
 
 Ba chi tiết đáng chú ý. \textbf{Thứ nhất}, câu bị ngắt bởi dấu sang trang được nối lại: nếu

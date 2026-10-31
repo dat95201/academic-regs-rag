@@ -29,11 +29,15 @@ img/                hình minh hoạ (diagram + ảnh chụp màn hình)
 | Vai trò | Font | Vì sao |
 |---|---|---|
 | Thân bài | TeX Gyre Pagella | Bản TeX Gyre của Palatino, phủ đủ tiếng Việt, dễ đọc khi in dài |
-| Tiêu đề, bảng, chú thích | Carlito | Sans nhân văn, tương phản tốt với Pagella |
-| Mã nguồn | DejaVu Sans Mono | Phủ đủ tiếng Việt, phân biệt rõ 0/O và 1/l |
+| Tiêu đề, bảng, chú thích | TeX Gyre Heros | Bản TeX Gyre của Helvetica; nét sạch, tương phản rõ với Pagella |
+| Mã nguồn | Latin Modern Mono | Phủ đủ tiếng Việt dựng sẵn |
 
-Ba font này đều có sẵn trong TeX Live / hầu hết bản phân phối Linux. Nếu máy thiếu Carlito,
-đổi dòng `\setsansfont` trong `preamble.tex` sang font sans bất kỳ có tiếng Việt.
+Cả ba đều nằm trong TeX Live nên có sẵn ở mọi bản cài, kể cả image Docker dùng để build.
+
+**Đừng đổi font mã nguồn sang DejaVu Sans Mono.** Font đó thiếu 21/49 ký tự tiếng Việt dựng
+sẵn (`ế ồ ẩ ả ấ ầ ắ ẵ ẻ ề ể ễ` …). Khi thiếu glyph, HarfBuzz tách ký tự thành nền + dấu rời,
+mà trong font đơn cách dấu rời chiếm hẳn một ô, nên chữ vỡ: `nếu` hiện thành `nêú`. Nếu cần
+đổi, kiểm tra font mới có đủ dải U+1EA0–U+1EF9 trước.
 
 ## Quy ước khi sửa nội dung
 

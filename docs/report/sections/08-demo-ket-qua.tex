@@ -77,17 +77,19 @@ và mỗi khoản hiện chú thích nguồn gốc riêng.}
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{img/debug-real.png}
-\caption{Trang chẩn đoán với câu hỏi “điều kiện buộc thôi học”: 28 ứng viên, 257\,ms, và điểm
-của từng nhánh cho mỗi chunk. Điều 37 (Xử lý học vụ) có cosine cao nhất (0,6603) và BM25 cao
-nhất (18,61), nhưng Điều 32 lên hạng nhất sau rerank — cả hai đều đúng chủ đề, và chính dạng
-thông tin này cho phép tinh chỉnh trọng số dựa trên quan sát thay vì phỏng đoán.}
+\caption{Trang chẩn đoán với câu hỏi “điều kiện buộc thôi học”: 28 ứng viên, 257\,ms, kèm điểm
+của từng nhánh cho mỗi chunk.}
 \label{fig:debug}
 \end{figure}
+
+Điều 37 (Xử lý học vụ) có cosine cao nhất (0,6603) và BM25 cao nhất (18,61), nhưng Điều 32 mới
+lên hạng nhất sau rerank — cả hai đều đúng chủ đề. Chính dạng thông tin tách bạch từng nhánh
+này cho phép tinh chỉnh trọng số dựa trên quan sát thay vì phỏng đoán.
 
 \subsection{Thống kê kho dữ liệu}
 
 \begin{rtable}
-\begin{tabular}{@{}p{0.62\textwidth} r@{}}
+\begin{tabularx}{\textwidth}{@{}X r@{}}
 \toprule
 \textbf{Chỉ số} & \textbf{Giá trị} \\
 \midrule
@@ -102,7 +104,7 @@ Số chunk vượt ngưỡng 800 token (đều là bảng) & 1 \\
 Số chunk mang chú thích nguồn gốc & 60 / 90 \\
 Số chunk chứa bảng biểu & 18 / 90 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \captionof{table}{Thống kê kho dữ liệu sau khi nạp.}
 \label{tab:corpus}
 \end{rtable}
@@ -231,7 +233,7 @@ Bộ test nào cần dựng cả stack mới chạy được thì sẽ không ai
 \subsection{Hiệu năng}
 
 \begin{rtable}
-\begin{tabular}{@{}p{0.55\textwidth} r@{}}
+\begin{tabularx}{\textwidth}{@{}X r@{}}
 \toprule
 \textbf{Giai đoạn} & \textbf{Thời gian đo được} \\
 \midrule
@@ -241,7 +243,7 @@ Lượt bị từ chối (không gọi mô hình sinh) & 1,3\,s \\
 Nạp dữ liệu lại toàn bộ 90 chunk (CPU) & vài phút \\
 Nạp dữ liệu khi không có thay đổi & tức thì \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \captionof{table}{Hiệu năng đo trên máy thật, chế độ cloud (\code{--cloud}, embedding vẫn
 chạy local).}
 \label{tab:perf}
